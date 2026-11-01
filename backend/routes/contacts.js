@@ -1,5 +1,6 @@
 const router = require("express").Router();
 const Contact = require("../models/Contact");
+const requireAdmin = require("../middleware/auth");
 
 router.post("/", async (req, res) => {
   try {
@@ -59,6 +60,51 @@ router.post("/", async (req, res) => {
     console.error("Error al guardar contacto:", error.message);
     res.status(500).json({
       error: "No se pudo procesar la solicitud"
+    });
+  }
+});
+
+
+router.get("/", requireAdmin, async (req, res) => {
+  try {
+    const contacts = await Contact.find()
+      .sort({ createdAt: -1 })
+      .limit(100);
+
+    res.json(contacts);
+  } catch {
+    res.status(500).json({
+      error: "No se pudieron cargar las solicitudes"
+    });
+  }
+});
+
+router.patch("/:id/status", requireAdmin, async (req, res) => {
+  try {
+    const { status } = req.body || {};
+
+    if (!["pending", "reviewed", "resolved"].includes(status)) {
+      return res.status(400).json({
+        error: "Estado inválido"
+      });
+    }
+
+    const contact = await Contact.findByIdAndUpdate(
+      req.params.id,
+      { status },
+      { new: true, runValidators: true }
+    );
+
+    if (!contact) {
+      return res.status(404).json({
+        error: "Solicitud no encontrada"
+      });
+    }
+
+    res.json(contact);
+  } catch {
+    res.status(400).json({
+      error: "No se pudo actualizar la solicitud"
     });
   }
 });

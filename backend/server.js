@@ -10,6 +10,7 @@ app.use(cors());
 app.use(express.json());
 app.use("/api/projects", require("./routes/projects"));
 app.use("/api/contacts", require("./routes/contacts"));
+app.use("/api/auth", require("./routes/auth"));
 
 app.get("/api", (req, res) => {
   res.json({
