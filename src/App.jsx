@@ -1,8 +1,8 @@
-
 import { useState } from "react";
 import "./App.css";
 import { useEffect } from "react";
 import { getServerStatus } from "./services/api";
+import { saveProject, getProjects } from "./services/api";
 
 
 const initialMap = Array.from({ length: 100 }, () => "empty");
@@ -20,6 +20,48 @@ export default function App() {
   const [map, setMap] = useState(initialMap);
   const [selected, setSelected] = useState("house");
   const [serverStatus, setServerStatus] = useState("Conectando...");
+  const [saving, setSaving] = useState(false);
+  const [message, setMessage] = useState("");
+
+  async function handleSave() {
+    const name = window.prompt("Nombre del proyecto urbano:");
+
+    if (!name?.trim()) return;
+
+    setSaving(true);
+    setMessage("");
+
+    try {
+      await saveProject({
+        name: name.trim(),
+        description: "Proyecto creado en TRAZA Urban Studio",
+        map
+      });
+
+      setMessage("Proyecto guardado correctamente");
+    } catch (error) {
+      setMessage(error.message);
+    } finally {
+      setSaving(false);
+    }
+  }
+
+  async function handleLoad() {
+    try {
+      const projects = await getProjects();
+
+      if (projects.length === 0) {
+        setMessage("Todavía no hay proyectos guardados");
+        return;
+      }
+
+      // Por ahora cargamos el proyecto más reciente.
+      setMap(projects[0].map);
+      setMessage(`Proyecto cargado: ${projects[0].name}`);
+    } catch (error) {
+      setMessage(error.message);
+    }
+  }
 
   useEffect(() => {
     getServerStatus()
@@ -99,6 +141,16 @@ export default function App() {
         >
           Reiniciar ciudad
         </button>
+        
+        <button className="reset" onClick={handleSave} disabled={saving}>
+          {saving ? "Guardando..." : "Guardar proyecto"}
+        </button>
+
+        <button className="reset" onClick={handleLoad}>
+          Cargar último proyecto
+        </button>
+
+        <p role="status">{message}</p>
       </main>
     </div>
   );
