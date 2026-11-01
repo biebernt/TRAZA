@@ -1,6 +1,6 @@
 import { businessTypes } from "../data/zones";
 
-export function calculateLocationScore(zone, businessType) {
+export function getLocationBreakdown(zone, businessType) {
   const business = businessTypes[businessType];
 
   if (!business) {
@@ -9,12 +9,21 @@ export function calculateLocationScore(zone, businessType) {
 
   const w = business.weights;
 
-  const score =
-    zone.population * w.population +
-    zone.access * w.access +
-    (100 - zone.competition) * w.competition +
-    zone.services * w.services;
+  return [
+    { key: "population", label: "Demanda", value: zone.population, adjusted: zone.population },
+    { key: "access", label: "Accesibilidad", value: zone.access, adjusted: zone.access },
+    { key: "competition", label: "Competencia", value: zone.competition, adjusted: 100 - zone.competition },
+    { key: "services", label: "Servicios", value: zone.services, adjusted: zone.services }
+  ].map(criterion => ({
+    ...criterion,
+    weight: w[criterion.key],
+    contribution: criterion.adjusted * w[criterion.key]
+  }));
+}
 
+export function calculateLocationScore(zone, businessType) {
+  const score = getLocationBreakdown(zone, businessType)
+    .reduce((total, criterion) => total + criterion.contribution, 0);
   return Math.round(score);
 }
 
