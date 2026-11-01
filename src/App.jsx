@@ -40,9 +40,10 @@ export default function App() {
 
   return (
     <div className="traza-layout">
+      <a className="traza-skip-link" href="#main-content">Saltar al contenido</a>
       <Navbar page={page} navigate={setPage} />
 
-      <main className="traza-main">
+      <main id="main-content" className="traza-main" tabIndex={-1}>
         {renderPage()}
       </main>
     </div>

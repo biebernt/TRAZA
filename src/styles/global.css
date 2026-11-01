@@ -1,0 +1,25 @@
+:root {
+  --traza-navy: #14283f;
+  --traza-blue: #244a61;
+  --traza-green: #159c83;
+  --traza-green-dark: #117b69;
+  --traza-bg: #f5f7fa;
+  --traza-surface: #fff;
+  --traza-border: #e1e7ed;
+  --traza-muted: #64748b;
+  --traza-radius: 18px;
+}
+
+.traza-container { max-width: 1200px; margin-inline: auto; }
+.traza-card { background: var(--traza-surface); border: 1px solid var(--traza-border); border-radius: var(--traza-radius); }
+.traza-btn { display: inline-flex; align-items: center; justify-content: center; gap: 12px; min-height: 46px; padding: 12px 19px; border: 1px solid transparent; border-radius: 9px; font: inherit; font-size: 14px; font-weight: 700; cursor: pointer; }
+.traza-btn-primary { background: var(--traza-green-dark); color: #fff; }
+.traza-btn-primary:hover { background: #0d6557; }
+.traza-btn-secondary { background: transparent; border-color: currentColor; color: inherit; }
+.traza-btn-secondary:hover { background: rgb(255 255 255 / 8%); }
+button:focus-visible, a:focus-visible, input:focus-visible, select:focus-visible, textarea:focus-visible { outline: 3px solid #159c83; outline-offset: 4px; }
+.traza-skip-link { position: fixed; top: 12px; left: 12px; z-index: 100; padding: 12px 18px; border-radius: 8px; background: #fff; color: var(--traza-navy); transform: translateY(-160%); }
+.traza-skip-link:focus { transform: translateY(0); }
+@media (prefers-reduced-motion: reduce) {
+  *, *::before, *::after { animation-duration: 0.01ms !important; transition-duration: 0.01ms !important; scroll-behavior: auto !important; }
+}
