@@ -37,3 +37,20 @@ export async function getProjects() {
   return response.json();
 }
 
+export async function sendContact(contact) {
+  const response = await fetch(`${API_URL}/api/contacts`, {
+    method: "POST",
+    headers: {
+      "Content-Type": "application/json"
+    },
+    body: JSON.stringify(contact)
+  });
+
+  const data = await response.json();
+
+  if (!response.ok) {
+    throw new Error(data.error || "Error al enviar solicitud");
+  }
+
+  return data;
+}
