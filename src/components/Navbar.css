@@ -1,0 +1,87 @@
+.traza-navbar {
+  width: 260px;
+  min-height: 100vh;
+  background: #14283f;
+  color: white;
+  padding: 30px 20px;
+  display: flex;
+  flex-direction: column;
+  flex-shrink: 0;
+}
+
+.brand {
+  padding: 0 12px;
+  margin-bottom: 40px;
+}
+
+.brand h1 {
+  font-size: 32px;
+  letter-spacing: 3px;
+  margin: 0;
+}
+
+.brand p {
+  font-size: 12px;
+  color: #9bb0c4;
+  margin-top: 6px;
+}
+
+.traza-navbar nav {
+  display: flex;
+  flex-direction: column;
+  gap: 8px;
+}
+
+.traza-navbar nav button {
+  padding: 14px;
+  background: transparent;
+  color: #c8d5e2;
+  border: none;
+  border-radius: 8px;
+  text-align: left;
+  font-size: 14px;
+  transition: background 0.2s;
+}
+
+.traza-navbar nav button:hover {
+  background: #263d55;
+}
+
+.traza-navbar nav button.nav-active {
+  background: #27a48b;
+  color: white;
+  font-weight: bold;
+}
+
+.navbar-footer {
+  margin-top: auto;
+  padding: 20px 12px 0;
+  color: #9bb0c4;
+}
+
+@media (max-width: 800px) {
+  .traza-navbar {
+    width: 100%;
+    min-height: auto;
+    padding: 20px;
+  }
+
+  .brand {
+    margin-bottom: 20px;
+  }
+
+  .traza-navbar nav {
+    flex-direction: row;
+    overflow-x: auto;
+    padding-bottom: 8px;
+  }
+
+  .traza-navbar nav button {
+    white-space: nowrap;
+    flex-shrink: 0;
+  }
+
+  .navbar-footer {
+    display: none;
+  }
+}
