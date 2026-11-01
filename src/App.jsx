@@ -3,6 +3,7 @@ import "./App.css";
 import { useEffect } from "react";
 import { getServerStatus } from "./services/api";
 import { saveProject, getProjects } from "./services/api";
+import LocationAnalyzer from "./components/LocationAnalyzer";
 
 
 const initialMap = Array.from({ length: 100 }, () => "empty");
@@ -141,7 +142,7 @@ export default function App() {
         >
           Reiniciar ciudad
         </button>
-        
+
         <button className="reset" onClick={handleSave} disabled={saving}>
           {saving ? "Guardando..." : "Guardar proyecto"}
         </button>
@@ -151,6 +152,8 @@ export default function App() {
         </button>
 
         <p role="status">{message}</p>
+
+        <LocationAnalyzer />
       </main>
     </div>
   );
