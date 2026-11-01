@@ -1,6 +1,9 @@
 
 import { useState } from "react";
 import "./App.css";
+import { useEffect } from "react";
+import { getServerStatus } from "./services/api";
+
 
 const initialMap = Array.from({ length: 100 }, () => "empty");
 
@@ -16,6 +19,14 @@ const types = {
 export default function App() {
   const [map, setMap] = useState(initialMap);
   const [selected, setSelected] = useState("house");
+  const [serverStatus, setServerStatus] = useState("Conectando...");
+
+  useEffect(() => {
+    getServerStatus()
+      .then(() => setServerStatus("Servidor conectado"))
+      .catch(() => setServerStatus("Servidor desconectado"));
+  }, []);
+
 
   function editCell(index) {
     setMap(previous =>
@@ -49,6 +60,7 @@ export default function App() {
         <header>
           <h2>Editor de planificación urbana</h2>
           <p>Selecciona una herramienta y modifica la ciudad.</p>
+          <p>Estado del sistema: {serverStatus}</p>
         </header>
 
         <section className="stats">
