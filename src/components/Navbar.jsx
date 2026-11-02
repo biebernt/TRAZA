@@ -1,5 +1,6 @@
 import { useState } from "react";
 import "./Navbar.css";
+import trazaLogo from "../resources/t..png";
 
 const navigation = [
   { id: "home", label: "Inicio", symbol: "⌂" },
@@ -22,7 +23,7 @@ export default function Navbar({ page, navigate }) {
     <aside className="traza-navbar">
       <div className="navbar-top">
         <button type="button" className="brand" aria-label="TRAZA, ir al inicio" onClick={() => selectPage("home")}>
-          <span className="brand-mark" aria-hidden="true">T<span /></span>
+          <img className="brand-logo" src={trazaLogo} alt="" width="44" height="44" />
           <span><strong>TRAZA</strong><small>Urban Intelligence</small></span>
         </button>
         <button type="button" className="navbar-toggle" aria-expanded={menuOpen} aria-controls="traza-navigation" onClick={() => setMenuOpen(open => !open)}>{menuOpen ? "Cerrar" : "Menú"}<span aria-hidden="true">{menuOpen ? "×" : "☰"}</span></button>
