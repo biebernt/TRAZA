@@ -3,7 +3,8 @@ import { CELL_TYPES } from "../utils/urbanAnalysis";
 export default function UrbanToolbar({
   selectedTool,
   onSelectTool,
-  onClear
+  onClear,
+  disabled = false
 }) {
   return (
     <section className="urban-toolbar">
@@ -14,6 +15,7 @@ export default function UrbanToolbar({
           <button
             key={type}
             type="button"
+            disabled={disabled}
             className={
               selectedTool === type
                 ? "urban-tool active"
@@ -34,6 +36,7 @@ export default function UrbanToolbar({
       <button
         type="button"
         className="urban-clear-button"
+        disabled={disabled}
         onClick={onClear}
       >
         Limpiar mapa

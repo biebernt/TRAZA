@@ -8,18 +8,12 @@ import {
 import UrbanStats from "../components/UrbanStats";
 import UrbanToolbar from "../components/UrbanToolbar";
 
-import "../App.css";
+import { CELL_TYPES } from "../utils/urbanAnalysis";
+import "./UrbanStudio.css";
 
 const initialMap = Array(100).fill("empty");
 
-const types = {
-    empty: { icon: "", label: "Vacío" },
-    road: { icon: "🛣️", label: "Calle" },
-    house: { icon: "🏠", label: "Vivienda" },
-    business: { icon: "🏪", label: "Negocio" },
-    park: { icon: "🌳", label: "Parque" },
-    school: { icon: "🏫", label: "Escuela" }
-};
+const types = CELL_TYPES;
 
 export default function UrbanStudio() {
     // Estados principales
@@ -30,12 +24,14 @@ export default function UrbanStudio() {
     const [saving, setSaving] = useState(false);
     const [loading, setLoading] = useState(false);
     const [message, setMessage] = useState("");
+    const [messageError, setMessageError] = useState(false);
+    const [projectName, setProjectName] = useState("");
 
     // Comprobar conexión con el backend
     useEffect(() => {
         getServerStatus()
-            .then(() => {
-                setServerStatus("Servidor conectado");
+            .then(status => {
+                setServerStatus(status.database === "connected" ? "Servidor conectado" : "Base de datos desconectada");
             })
             .catch(() => {
                 setServerStatus("Servidor desconectado");
@@ -59,18 +55,23 @@ export default function UrbanStudio() {
 
         if (!confirmed) return;
 
+        setMessageError(false);
         setMap([...initialMap]);
         setMessage("Mapa reiniciado correctamente");
     }
 
     // Guardar proyecto en MongoDB
-    async function handleSave() {
-        const name = window.prompt(
-            "Introduce el nombre de tu proyecto urbano:"
-        );
+    async function handleSave(event) {
+        event.preventDefault();
+        const name = projectName;
 
-        if (!name || !name.trim()) return;
+        if (!name.trim()) {
+            setMessageError(true);
+            setMessage("Escribe un nombre para tu proyecto; no puede contener solo espacios.");
+            return;
+        }
 
+        setMessageError(false);
         setSaving(true);
         setMessage("");
 
@@ -83,6 +84,7 @@ export default function UrbanStudio() {
 
             setMessage("Proyecto guardado correctamente en MongoDB");
         } catch (error) {
+            setMessageError(true);
             setMessage(
                 `Error al guardar: ${error.message}`
             );
@@ -93,6 +95,8 @@ export default function UrbanStudio() {
 
     // Cargar el último proyecto guardado
     async function handleLoad() {
+        if (map.some(cell => cell !== "empty") && !window.confirm("Cargar el último proyecto reemplazará el mapa actual. ¿Quieres continuar?")) return;
+        setMessageError(false);
         setLoading(true);
         setMessage("");
 
@@ -119,11 +123,13 @@ export default function UrbanStudio() {
             }
 
             setMap([...latestProject.map]);
+            setProjectName(latestProject.name);
 
             setMessage(
                 `Proyecto cargado correctamente: ${latestProject.name}`
             );
         } catch (error) {
+            setMessageError(true);
             setMessage(
                 `Error al cargar: ${error.message}`
             );
@@ -147,18 +153,19 @@ export default function UrbanStudio() {
 
     return (
         <div className="urban-studio">
-            <main className="content">
+            <div className="content">
 
                 {/* Encabezado */}
                 <header>
-                    <h2>TRAZA Urban Studio</h2>
+                    <span className="traza-kicker">DISEÑA Y EXPLORA</span>
+                    <h1>TRAZA Urban Studio</h1>
 
                     <p>
                         Diseña, modifica y analiza escenarios urbanos
                         mediante nuestro editor interactivo.
                     </p>
 
-                    <p>
+                    <p className="urban-system-status" role="status">
                         <strong>Estado del sistema:</strong>{" "}
                         {serverStatus}
                     </p>
@@ -187,10 +194,12 @@ export default function UrbanStudio() {
                     selectedTool={selectedTool}
                     onSelectTool={setSelectedTool}
                     onClear={clearMap}
+                    disabled={saving || loading}
                 />
 
                 {/* Editor urbano */}
-                <section className="editor">
+                <section className="editor" aria-labelledby="urban-editor-title">
+                    <div className="urban-editor-heading"><h2 id="urban-editor-title">Tu escenario urbano</h2><p>Selecciona una herramienta y pulsa una celda para editarla. Cuadrícula de 10 × 10.</p></div>
                     <div className="map">
                         {map.map((cell, index) => (
                             <button
@@ -198,6 +207,7 @@ export default function UrbanStudio() {
                                 type="button"
                                 className={`cell ${cell}`}
                                 onClick={() => editCell(index)}
+                                disabled={saving || loading}
                                 title={`Celda ${index + 1}: ${types[cell].label}`}
                                 aria-label={`Celda ${index + 1}: ${types[cell].label}`}
                             >
@@ -209,6 +219,7 @@ export default function UrbanStudio() {
 
                 {/* Análisis urbano */}
                 <UrbanStats map={map} />
+                <p className="traza-form-help urban-disclaimer">Indicadores demostrativos basados en reglas de ejemplo, sin validación normativa. No sustituyen una evaluación urbanística profesional.</p>
 
                 {/* Gestión de proyectos */}
                 <section className="project-actions">
@@ -219,11 +230,12 @@ export default function UrbanStudio() {
                         el proyecto más reciente.
                     </p>
 
+                    <form className="urban-project-form" onSubmit={handleSave}>
+                        <div className="traza-field"><label htmlFor="urban-project-name">Nombre del proyecto</label><input id="urban-project-name" value={projectName} onChange={event => setProjectName(event.target.value)} maxLength={100} placeholder="Ej. Barrio Las Palmeras" disabled={saving || loading} required /></div>
                     <div className="project-buttons">
                         <button
-                            type="button"
-                            className="reset"
-                            onClick={handleSave}
+                            type="submit"
+                            className="traza-btn traza-btn-primary"
                             disabled={saving || loading}
                         >
                             {saving ? "Guardando..." : "Guardar proyecto"}
@@ -231,7 +243,7 @@ export default function UrbanStudio() {
 
                         <button
                             type="button"
-                            className="reset"
+                            className="traza-btn traza-btn-secondary"
                             onClick={handleLoad}
                             disabled={loading || saving}
                         >
@@ -241,14 +253,16 @@ export default function UrbanStudio() {
                         </button>
                     </div>
 
+                    </form>
+                    <p className="traza-form-help">Los proyectos se guardan en el servidor compartido de este prototipo. Salir de esta sección descarta los cambios sin guardar.</p>
                     {message && (
-                        <p role="status" className="project-message">
+                        <p role={messageError ? "alert" : "status"} className={`traza-message ${messageError ? "traza-message-error" : "traza-message-success"}`}>
                             {message}
                         </p>
                     )}
                 </section>
 
-            </main>
+            </div>
         </div>
     );
 }
