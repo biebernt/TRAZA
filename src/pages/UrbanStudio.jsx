@@ -67,7 +67,7 @@ export default function UrbanStudio() {
 
         if (!name.trim()) {
             setMessageError(true);
-            setMessage("Escribe un nombre para tu proyecto; no puede contener solo espacios.");
+            setMessage("Escribe un nombre para tu proyecto.");
             return;
         }
 
@@ -82,7 +82,7 @@ export default function UrbanStudio() {
                 map
             });
 
-            setMessage("Proyecto guardado correctamente en MongoDB");
+            setMessage("Proyecto guardado correctamente");
         } catch (error) {
             setMessageError(true);
             setMessage(
