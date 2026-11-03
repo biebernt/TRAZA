@@ -11,6 +11,7 @@ app.use(express.json());
 app.use("/api/projects", require("./routes/projects"));
 app.use("/api/contacts", require("./routes/contacts"));
 app.use("/api/auth", require("./routes/auth"));
+app.use("/api/walkability", require("./routes/walkability"));
 
 app.get("/api", (req, res) => {
   res.json({

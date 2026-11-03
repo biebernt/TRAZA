@@ -7,6 +7,7 @@ const navigation = [
   { id: "services", label: "Servicios", symbol: "◇" },
   { id: "urban", label: "Urban Studio", symbol: "▦" },
   { id: "intelligence", label: "Location Intelligence", symbol: "◎" },
+  { id: "walkability", label: "Caminabilidad", symbol: "⌁" },
   { id: "contact", label: "Contacto", symbol: "✉" },
   { id: "admin", label: "Administración", symbol: "⚙" }
 ];

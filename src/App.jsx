@@ -5,6 +5,7 @@ import Home from "./pages/Home";
 import Services from "./pages/Services";
 import UrbanStudio from "./pages/UrbanStudio";
 import LocationIntelligence from "./pages/LocationIntelligence";
+import Walkability from "./pages/Walkability";
 import Contact from "./pages/Contact";
 import Admin from "./pages/Admin";
 
@@ -26,6 +27,9 @@ export default function App() {
 
       case "intelligence":
         return <LocationIntelligence />;
+
+      case "walkability":
+        return <Walkability />;
 
       case "contact":
         return <Contact />;

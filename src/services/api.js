@@ -121,3 +121,11 @@ export async function logoutAdmin(token) {
     throw new Error("No se pudo cerrar sesión");
   }
 }
+export async function getWalkingPlaces(signal) {
+  const response = await fetch(`${API_URL}/api/walkability/places`, { signal });
+  const data = await response.json();
+  if (!response.ok) {
+    throw new Error(data.error || "No se pudieron consultar los servicios del área piloto.");
+  }
+  return data;
+}
