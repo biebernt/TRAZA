@@ -11,6 +11,8 @@ import UrbanToolbar from "../components/UrbanToolbar";
 import { CELL_TYPES } from "../utils/urbanAnalysis";
 import "./UrbanStudio.css";
 
+import UrbanMap from "../components/UrbanMap";
+
 const initialMap = Array(100).fill("empty");
 
 const types = CELL_TYPES;
@@ -26,6 +28,23 @@ export default function UrbanStudio() {
     const [message, setMessage] = useState("");
     const [messageError, setMessageError] = useState(false);
     const [projectName, setProjectName] = useState("");
+    const [features, setFeatures] = useState([]);
+
+    function addMapFeature(feature) {
+        if (selectedTool === "empty") {
+            setMessage("Selecciona una herramienta para colocar elementos.");
+            return;
+        }
+
+        setFeatures((previous) => [...previous, feature]);
+        setMessage("");
+    }
+
+    function removeMapFeature(id) {
+        setFeatures((previous) =>
+            previous.filter((feature) => feature.id !== id)
+        );
+    }
 
     // Comprobar conexión con el backend
     useEffect(() => {
@@ -189,6 +208,13 @@ export default function UrbanStudio() {
                     </article>
                 </section>
 
+                <UrbanMap
+                    features={features}
+                    selectedTool={selectedTool}
+                    onAddFeature={addMapFeature}
+                    onRemoveFeature={removeMapFeature}
+                />
+
                 {/* Herramientas */}
                 <UrbanToolbar
                     selectedTool={selectedTool}
@@ -232,26 +258,26 @@ export default function UrbanStudio() {
 
                     <form className="urban-project-form" onSubmit={handleSave}>
                         <div className="traza-field"><label htmlFor="urban-project-name">Nombre del proyecto</label><input id="urban-project-name" value={projectName} onChange={event => setProjectName(event.target.value)} maxLength={100} placeholder="Ej. Barrio Las Palmeras" disabled={saving || loading} required /></div>
-                    <div className="project-buttons">
-                        <button
-                            type="submit"
-                            className="traza-btn traza-btn-primary"
-                            disabled={saving || loading}
-                        >
-                            {saving ? "Guardando..." : "Guardar proyecto"}
-                        </button>
+                        <div className="project-buttons">
+                            <button
+                                type="submit"
+                                className="traza-btn traza-btn-primary"
+                                disabled={saving || loading}
+                            >
+                                {saving ? "Guardando..." : "Guardar proyecto"}
+                            </button>
 
-                        <button
-                            type="button"
-                            className="traza-btn traza-btn-secondary"
-                            onClick={handleLoad}
-                            disabled={loading || saving}
-                        >
-                            {loading
-                                ? "Cargando..."
-                                : "Cargar último proyecto"}
-                        </button>
-                    </div>
+                            <button
+                                type="button"
+                                className="traza-btn traza-btn-secondary"
+                                onClick={handleLoad}
+                                disabled={loading || saving}
+                            >
+                                {loading
+                                    ? "Cargando..."
+                                    : "Cargar último proyecto"}
+                            </button>
+                        </div>
 
                     </form>
                     <p className="traza-form-help">Los proyectos se guardan en el servidor compartido de este prototipo. Salir de esta sección descarta los cambios sin guardar.</p>

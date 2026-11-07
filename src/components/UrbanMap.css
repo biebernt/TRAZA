@@ -1,0 +1,164 @@
+.urban-map-section {
+  width: 100%;
+  margin: 28px 0;
+}
+
+.urban-map-heading {
+  display: flex;
+  justify-content: space-between;
+  align-items: center;
+  gap: 20px;
+  margin-bottom: 18px;
+}
+
+.urban-map-heading h2 {
+  margin: 6px 0;
+  font-size: 1.5rem;
+}
+
+.urban-map-heading p {
+  margin: 0;
+  color: #777;
+  font-size: 0.92rem;
+}
+
+.urban-map-reset {
+  border: 1px solid #d8d8d8;
+  background: white;
+  border-radius: 8px;
+  padding: 10px 14px;
+  cursor: pointer;
+  font: inherit;
+  white-space: nowrap;
+}
+
+.urban-map-reset:hover {
+  background: #f4f4f4;
+}
+
+.urban-map-canvas {
+  position: relative;
+  width: 100%;
+  height: 560px;
+  overflow: hidden;
+  background: #e8ece7;
+  border: 1px solid #ddd;
+  border-radius: 12px;
+  cursor: grab;
+  touch-action: none;
+  user-select: none;
+}
+
+.urban-map-canvas.is-dragging {
+  cursor: grabbing;
+}
+
+.urban-map-tiles {
+  position: absolute;
+  inset: 0;
+}
+
+.urban-map-tile {
+  position: absolute;
+  width: 256px;
+  height: 256px;
+  max-width: none;
+  pointer-events: none;
+  -webkit-user-drag: none;
+}
+
+.urban-map-controls {
+  position: absolute;
+  top: 16px;
+  right: 16px;
+  display: flex;
+  flex-direction: column;
+  gap: 5px;
+  z-index: 2;
+}
+
+.urban-map-controls button {
+  width: 42px;
+  height: 42px;
+  border: 1px solid #ddd;
+  border-radius: 7px;
+  background: white;
+  font-size: 25px;
+  cursor: pointer;
+  box-shadow: 0 2px 6px rgba(0, 0, 0, 0.12);
+}
+
+.urban-map-controls button:disabled {
+  opacity: 0.4;
+  cursor: not-allowed;
+}
+
+.urban-map-zoom-label {
+  position: absolute;
+  top: 16px;
+  left: 16px;
+  padding: 7px 11px;
+  border-radius: 6px;
+  background: white;
+  font-size: 12px;
+  color: #444;
+  z-index: 2;
+}
+
+.urban-map-attribution {
+  position: absolute;
+  bottom: 0;
+  right: 0;
+  padding: 5px 8px;
+  background: rgba(255, 255, 255, 0.9);
+  font-size: 11px;
+  z-index: 2;
+}
+
+.urban-map-attribution a {
+  color: #2765a8;
+}
+
+.urban-map-instructions {
+  margin-top: 10px;
+  color: #777;
+  font-size: 0.85rem;
+}
+
+@media (max-width: 650px) {
+  .urban-map-heading {
+    align-items: flex-start;
+    flex-direction: column;
+  }
+
+  .urban-map-canvas {
+    height: 430px;
+  }
+}
+.urban-map-features {
+  position: absolute;
+  inset: 0;
+  z-index: 1;
+  pointer-events: none;
+}
+
+.urban-map-feature {
+  position: absolute;
+  transform: translate(-50%, -50%);
+  width: 38px;
+  height: 38px;
+  display: flex;
+  justify-content: center;
+  align-items: center;
+  border: 2px solid white;
+  border-radius: 50%;
+  background: #ffffff;
+  font-size: 20px;
+  cursor: pointer;
+  pointer-events: auto;
+  box-shadow: 0 2px 7px rgba(0, 0, 0, 0.25);
+}
+
+.urban-map-feature:hover {
+  transform: translate(-50%, -50%) scale(1.15);
+}
