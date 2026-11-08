@@ -25,12 +25,12 @@ export default function Navbar({ page, navigate }) {
       <div className="navbar-top">
         <button type="button" className="brand" aria-label="TRAZA, ir al inicio" onClick={() => selectPage("home")}>
           <img className="brand-logo" src={trazaLogo} alt="" width="44" height="44" />
-          <span><strong>TRAZA</strong><small>Urban Intelligence</small></span>
+          <span><strong>URBI</strong><small>Urban Intelligence</small></span>
         </button>
         <button type="button" className="navbar-toggle" aria-expanded={menuOpen} aria-controls="traza-navigation" onClick={() => setMenuOpen(open => !open)}>{menuOpen ? "Cerrar" : "Menú"}<span aria-hidden="true">{menuOpen ? "×" : "☰"}</span></button>
       </div>
       <nav id="traza-navigation" className={menuOpen ? "navbar-navigation is-open" : "navbar-navigation"} aria-label="Navegación principal">
-        <span className="navbar-section-label">EXPLORA TRAZA</span>
+        <span className="navbar-section-label">EXPLORA URBI</span>
         {navigation.map(item => (
           <button type="button" key={item.id} className={page === item.id ? "nav-active" : ""} aria-current={page === item.id ? "page" : undefined} onClick={() => selectPage(item.id)}>
             <span className="navbar-symbol" aria-hidden="true">{item.symbol}</span><span>{item.label}</span>{page === item.id && <span className="navbar-active-dot" aria-hidden="true" />}

@@ -53,7 +53,7 @@ export default function Home({ navigate }) {
         <div><span className="home-kicker">DE LA IDEA AL ESCENARIO</span><h2 id="home-process-title">Empieza con una pregunta.</h2><p>¿Cómo distribuirías un barrio? ¿Dónde abrirías tu próximo negocio?</p></div>
         <ol><li><strong>Elige una herramienta</strong><span>Diseña un entorno o compara zonas.</span></li><li><strong>Explora alternativas</strong><span>Cambia el diseño o el tipo de negocio.</span></li><li><strong>Interpreta los resultados</strong><span>Revisa indicadores y encuentra oportunidades.</span></li></ol>
       </section>
-      <footer className="home-footer"><p><strong>Exploración con propósito.</strong> TRAZA es un prototipo educativo de Jóvenes creaTIvos 2026, Panamá. Los análisis comerciales utilizan datos ficticios y las observaciones urbanas se basan en reglas de ejemplo; no sustituyen estudios profesionales.</p><button type="button" className="home-text-button" onClick={() => navigate("contact")}>Hablemos de tu idea <span className="home-link-arrow" aria-hidden="true" /></button></footer>
+      <footer className="home-footer"><p><strong>Exploración con propósito.</strong> URBI es un prototipo educativo de Jóvenes creaTIvos 2026, Panamá. Los análisis comerciales utilizan datos ficticios y las observaciones urbanas se basan en reglas de ejemplo; no sustituyen estudios profesionales.</p><button type="button" className="home-text-button" onClick={() => navigate("contact")}>Hablemos de tu idea <span className="home-link-arrow" aria-hidden="true" /></button></footer>
     </div>
   );
 }
