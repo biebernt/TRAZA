@@ -46,6 +46,10 @@ export default function UrbanStudio() {
         );
     }
 
+    function clearMapFeatures() {
+        setFeatures([]);
+    }
+
     // Comprobar conexión con el backend
     useEffect(() => {
         getServerStatus()
@@ -76,7 +80,8 @@ export default function UrbanStudio() {
 
         setMessageError(false);
         setMap([...initialMap]);
-        setMessage("Mapa reiniciado correctamente");
+        setFeatures([]);
+        setMessage("Mapa y elementos reiniciados correctamente");
     }
 
     // Guardar proyecto en MongoDB
@@ -213,6 +218,7 @@ export default function UrbanStudio() {
                     selectedTool={selectedTool}
                     onAddFeature={addMapFeature}
                     onRemoveFeature={removeMapFeature}
+                    onClearFeatures={clearMapFeatures}
                 />
 
                 {/* Herramientas */}

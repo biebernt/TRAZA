@@ -1,4 +1,5 @@
-import { useEffect, useMemo, useRef, useState } from "react";
+import { useCallback, useEffect, useMemo, useRef, useState } from "react";
+import { CELL_TYPES } from "../utils/urbanAnalysis";
 import "./UrbanMap.css";
 
 const INITIAL_CENTER = {
@@ -10,6 +11,25 @@ const INITIAL_ZOOM = 16;
 const TILE_SIZE = 256;
 const MIN_ZOOM = 13;
 const MAX_ZOOM = 19;
+const DRAG_THRESHOLD = 5;
+const KEYBOARD_PAN = 90;
+const CLICK_AFTER_DRAG_MS = 350;
+
+const FEATURE_ICONS = {
+    road: "🛣️",
+    house: "🏠",
+    business: "🏢",
+    park: "🌳",
+    school: "🏫",
+};
+
+function featureLabel(type) {
+    return CELL_TYPES[type]?.label ?? "Elemento";
+}
+
+function featureColor(type) {
+    return CELL_TYPES[type]?.color ?? "#159c83";
+}
 
 function latLonToPixel(lat, lon, zoom) {
     const scale = TILE_SIZE * 2 ** zoom;
@@ -44,15 +64,20 @@ export default function UrbanMap({
     selectedTool = "house",
     onAddFeature,
     onRemoveFeature,
+    onClearFeatures,
 }) {
     const mapRef = useRef(null);
     const dragRef = useRef(null);
+    const lastDragEndRef = useRef(0);
 
     const [center, setCenter] = useState(INITIAL_CENTER);
     const [zoom, setZoom] = useState(INITIAL_ZOOM);
     const [size, setSize] = useState({ width: 0, height: 0 });
     const [isDragging, setIsDragging] = useState(false);
-    const [suppressClick, setSuppressClick] = useState(false);
+    const [tilesState, setTilesState] = useState("loading");
+    const [announcement, setAnnouncement] = useState("");
+
+    const isIdle = selectedTool === "empty";
 
     useEffect(() => {
         const element = mapRef.current;
@@ -112,6 +137,96 @@ export default function UrbanMap({
         return result;
     }, [center, zoom, size]);
 
+    const zoomAt = useCallback(
+        (nextZoom, anchorX, anchorY) => {
+            const target = Math.max(
+                MIN_ZOOM,
+                Math.min(MAX_ZOOM, nextZoom)
+            );
+
+            if (target === zoom) return;
+
+            if (!size.width || !size.height) {
+                setZoom(target);
+                return;
+            }
+
+            const offsetX =
+                (anchorX ?? size.width / 2) - size.width / 2;
+            const offsetY =
+                (anchorY ?? size.height / 2) - size.height / 2;
+
+            const centerPixel = latLonToPixel(
+                center.lat,
+                center.lon,
+                zoom
+            );
+
+            const anchor = pixelToLatLon(
+                centerPixel.x + offsetX,
+                centerPixel.y + offsetY,
+                zoom
+            );
+
+            const anchorPixel = latLonToPixel(
+                anchor.lat,
+                anchor.lon,
+                target
+            );
+
+            setCenter(
+                pixelToLatLon(
+                    anchorPixel.x - offsetX,
+                    anchorPixel.y - offsetY,
+                    target
+                )
+            );
+            setZoom(target);
+        },
+        [center, zoom, size]
+    );
+
+    // La rueda del ratón necesita un listener no pasivo para no desplazar la página.
+    useEffect(() => {
+        const element = mapRef.current;
+        if (!element) return;
+
+        function handleWheel(event) {
+            event.preventDefault();
+
+            const rect = element.getBoundingClientRect();
+            const step = event.deltaY > 0 ? -1 : 1;
+
+            zoomAt(
+                zoom + step,
+                event.clientX - rect.left,
+                event.clientY - rect.top
+            );
+        }
+
+        element.addEventListener("wheel", handleWheel, {
+            passive: false,
+        });
+
+        return () => element.removeEventListener("wheel", handleWheel);
+    }, [zoom, zoomAt]);
+
+    function panBy(deltaX, deltaY) {
+        const centerPixel = latLonToPixel(
+            center.lat,
+            center.lon,
+            zoom
+        );
+
+        setCenter(
+            pixelToLatLon(
+                centerPixel.x + deltaX,
+                centerPixel.y + deltaY,
+                zoom
+            )
+        );
+    }
+
     function handlePointerDown(event) {
         if (event.button !== 0) return;
 
@@ -122,12 +237,12 @@ export default function UrbanMap({
         );
 
         dragRef.current = {
-            pointerX: event.clientX,
-            pointerY: event.clientY,
+            pointerId: event.pointerId,
+            startX: event.clientX,
+            startY: event.clientY,
             centerX: centerPixel.x,
             centerY: centerPixel.y,
-            lastX: event.clientX,
-            lastY: event.clientY,
+            moved: false,
         };
 
         event.currentTarget.setPointerCapture(event.pointerId);
@@ -135,63 +250,58 @@ export default function UrbanMap({
     }
 
     function handlePointerMove(event) {
-        if (!dragRef.current) return;
-
         const drag = dragRef.current;
-        drag.lastX = event.clientX;
-        drag.lastY = event.clientY;
+        if (!drag || drag.pointerId !== event.pointerId) return;
 
-        const deltaX = event.clientX - drag.pointerX;
-        const deltaY = event.clientY - drag.pointerY;
+        const deltaX = event.clientX - drag.startX;
+        const deltaY = event.clientY - drag.startY;
 
-        const nextCenter = pixelToLatLon(
-            drag.centerX - deltaX,
-            drag.centerY - deltaY,
-            zoom
+        if (
+            Math.abs(deltaX) > DRAG_THRESHOLD ||
+            Math.abs(deltaY) > DRAG_THRESHOLD
+        ) {
+            drag.moved = true;
+        }
+
+        setCenter(
+            pixelToLatLon(
+                drag.centerX - deltaX,
+                drag.centerY - deltaY,
+                zoom
+            )
         );
-
-        setCenter(nextCenter);
     }
 
-    function handlePointerUp() {
-        if (dragRef.current) {
-            const drag = dragRef.current;
+    function handlePointerUp(event) {
+        const drag = dragRef.current;
+        if (!drag) return;
 
-            const moved =
-                Math.abs(drag.pointerX - drag.lastX) > 5 ||
-                Math.abs(drag.pointerY - drag.lastY) > 5;
-
-            if (moved) {
-                setSuppressClick(true);
-            }
-        }
         dragRef.current = null;
-        setIsDragging(false)
-    }
+        setIsDragging(false);
 
-    function zoomIn() {
-        setZoom((current) => Math.min(current + 1, MAX_ZOOM));
-    }
-
-    function zoomOut() {
-        setZoom((current) => Math.max(current - 1, MIN_ZOOM));
-    }
-
-    function resetView() {
-        setCenter(INITIAL_CENTER);
-        setZoom(INITIAL_ZOOM);
-    }
-
-    function handleMapClick(event) {
-
-        if (suppressClick) {
-            setSuppressClick(false);
-            return;
+        // Un arrastre no debe colocar un elemento al soltar el puntero.
+        if (drag.moved) {
+            lastDragEndRef.current = Date.now();
         }
 
-        if (!mapRef.current || !onAddFeature) return;
+        if (
+            event.currentTarget.hasPointerCapture?.(drag.pointerId)
+        ) {
+            event.currentTarget.releasePointerCapture(
+                drag.pointerId
+            );
+        }
+    }
 
-        const rect = mapRef.current.getBoundingClientRect();
+    function placeFeatureAt(offsetX, offsetY) {
+        if (!mapRef.current || !onAddFeature) return false;
+
+        if (isIdle) {
+            setAnnouncement(
+                "Selecciona una herramienta de construcción para colocar elementos."
+            );
+            return false;
+        }
 
         const centerPixel = latLonToPixel(
             center.lat,
@@ -199,27 +309,85 @@ export default function UrbanMap({
             zoom
         );
 
-        const clickX = event.clientX - rect.left;
-        const clickY = event.clientY - rect.top;
-
-        const worldX =
-            centerPixel.x + clickX - rect.width / 2;
-
-        const worldY =
-            centerPixel.y + clickY - rect.height / 2;
-
         const coordinates = pixelToLatLon(
-            worldX,
-            worldY,
+            centerPixel.x + offsetX - size.width / 2,
+            centerPixel.y + offsetY - size.height / 2,
             zoom
         );
 
         onAddFeature({
-            id: `${Date.now()}-${Math.random()}`,
+            id: `${Date.now()}-${Math.random()
+                .toString(36)
+                .slice(2, 8)}`,
             type: selectedTool,
             lat: coordinates.lat,
             lon: coordinates.lon,
         });
+
+        setAnnouncement(
+            `${featureLabel(selectedTool)} añadido al mapa.`
+        );
+
+        return true;
+    }
+
+    function handleMapClick(event) {
+        if (Date.now() - lastDragEndRef.current < CLICK_AFTER_DRAG_MS) {
+            return;
+        }
+
+        if (!mapRef.current) return;
+
+        const rect = mapRef.current.getBoundingClientRect();
+
+        placeFeatureAt(
+            event.clientX - rect.left,
+            event.clientY - rect.top
+        );
+    }
+
+    function handleKeyDown(event) {
+        if (event.target !== event.currentTarget) return;
+
+        const step = event.shiftKey
+            ? KEYBOARD_PAN * 2
+            : KEYBOARD_PAN;
+
+        switch (event.key) {
+            case "ArrowLeft":
+                event.preventDefault();
+                panBy(-step, 0);
+                break;
+            case "ArrowRight":
+                event.preventDefault();
+                panBy(step, 0);
+                break;
+            case "ArrowUp":
+                event.preventDefault();
+                panBy(0, -step);
+                break;
+            case "ArrowDown":
+                event.preventDefault();
+                panBy(0, step);
+                break;
+            case "+":
+            case "=":
+                event.preventDefault();
+                zoomAt(zoom + 1);
+                break;
+            case "-":
+            case "_":
+                event.preventDefault();
+                zoomAt(zoom - 1);
+                break;
+            case "Enter":
+            case " ":
+                event.preventDefault();
+                placeFeatureAt(size.width / 2, size.height / 2);
+                break;
+            default:
+                break;
+        }
     }
 
     function getFeaturePosition(feature) {
@@ -243,20 +411,48 @@ export default function UrbanMap({
         };
     }
 
-    const featureIcons = {
-        road: "🛣️",
-        house: "🏠",
-        business: "🏢",
-        park: "🌳",
-        school: "🏫",
-    };
+    function removeFeature(feature) {
+        onRemoveFeature?.(feature.id);
+        setAnnouncement(
+            `${featureLabel(feature.type)} eliminado del mapa.`
+        );
+    }
+
+    function clearFeatures() {
+        if (!features.length) return;
+
+        onClearFeatures?.();
+        setAnnouncement("Se quitaron todos los elementos del mapa.");
+    }
+
+    const placedGroups = useMemo(() => {
+        const counts = new Map();
+
+        features.forEach(({ type }) => {
+            counts.set(type, (counts.get(type) ?? 0) + 1);
+        });
+
+        return [...counts.entries()];
+    }, [features]);
+
+    function handleTileLoad() {
+        setTilesState((current) =>
+            current === "loading" ? "ready" : current
+        );
+    }
+
+    function handleTileError() {
+        setTilesState((current) =>
+            current === "ready" ? current : "error"
+        );
+    }
 
     return (
-        <section className="urban-map-section">
+        <section className="urban-map-section" aria-labelledby="urban-map-title">
             <div className="urban-map-heading">
                 <div>
                     <span className="traza-kicker">MAPA INTERACTIVO</span>
-                    <h2>Ciudad del Saber</h2>
+                    <h2 id="urban-map-title">Ciudad del Saber</h2>
                     <p>
                         Explora el área y prepara tu escenario de planificación
                         urbana.
@@ -266,7 +462,11 @@ export default function UrbanMap({
                 <button
                     type="button"
                     className="urban-map-reset"
-                    onClick={resetView}
+                    onClick={() => {
+                        setCenter(INITIAL_CENTER);
+                        setZoom(INITIAL_ZOOM);
+                        setAnnouncement("Vista del mapa restablecida.");
+                    }}
                 >
                     Restablecer vista
                 </button>
@@ -274,13 +474,23 @@ export default function UrbanMap({
 
             <div
                 ref={mapRef}
-                className={`urban-map-canvas ${isDragging ? "is-dragging" : ""
-                    }`}
+                className={[
+                    "urban-map-canvas",
+                    isDragging ? "is-dragging" : "",
+                    isIdle ? "is-idle" : "is-placing",
+                ]
+                    .filter(Boolean)
+                    .join(" ")}
+                role="region"
+                aria-label="Mapa interactivo de Ciudad del Saber"
+                aria-describedby="urban-map-instructions"
+                tabIndex={0}
                 onClick={handleMapClick}
                 onPointerDown={handlePointerDown}
                 onPointerMove={handlePointerMove}
                 onPointerUp={handlePointerUp}
                 onPointerCancel={handlePointerUp}
+                onKeyDown={handleKeyDown}
             >
                 <div className="urban-map-tiles">
                     {tiles.map((tile) => (
@@ -289,7 +499,11 @@ export default function UrbanMap({
                             src={tile.url}
                             alt=""
                             draggable="false"
+                            loading="eager"
+                            decoding="async"
                             className="urban-map-tile"
+                            onLoad={handleTileLoad}
+                            onError={handleTileError}
                             style={{
                                 left: `${tile.left}px`,
                                 top: `${tile.top}px`,
@@ -301,6 +515,7 @@ export default function UrbanMap({
                 <div className="urban-map-features">
                     {features.map((feature) => {
                         const position = getFeaturePosition(feature);
+                        const label = featureLabel(feature.type);
 
                         return (
                             <button
@@ -310,16 +525,21 @@ export default function UrbanMap({
                                 style={{
                                     left: `${position.left}px`,
                                     top: `${position.top}px`,
+                                    "--feature-color": featureColor(
+                                        feature.type
+                                    ),
                                 }}
-                                title={`Eliminar ${feature.type}`}
-                                aria-label={`Eliminar elemento ${feature.type}`}
-                                onPointerDown={(event) => event.stopPropagation()}
+                                title={`Quitar ${label}`}
+                                aria-label={`Quitar ${label} del mapa`}
+                                onPointerDown={(event) =>
+                                    event.stopPropagation()
+                                }
                                 onClick={(event) => {
                                     event.stopPropagation();
-                                    onRemoveFeature?.(feature.id);
+                                    removeFeature(feature);
                                 }}
                             >
-                                {featureIcons[feature.type] || "📍"}
+                                {FEATURE_ICONS[feature.type] || "📍"}
                             </button>
                         );
                     })}
@@ -330,10 +550,11 @@ export default function UrbanMap({
                     onPointerDown={(event) => event.stopPropagation()}
                     onPointerMove={(event) => event.stopPropagation()}
                     onPointerUp={(event) => event.stopPropagation()}
+                    onClick={(event) => event.stopPropagation()}
                 >
                     <button
                         type="button"
-                        onClick={zoomIn}
+                        onClick={() => zoomAt(zoom + 1)}
                         disabled={zoom >= MAX_ZOOM}
                         aria-label="Acercar mapa"
                     >
@@ -342,7 +563,7 @@ export default function UrbanMap({
 
                     <button
                         type="button"
-                        onClick={zoomOut}
+                        onClick={() => zoomAt(zoom - 1)}
                         disabled={zoom <= MIN_ZOOM}
                         aria-label="Alejar mapa"
                     >
@@ -354,20 +575,93 @@ export default function UrbanMap({
                     Zoom {zoom}
                 </div>
 
-                <div className="urban-map-attribution">
-                    © <a
+                <div className="urban-map-tool-hint">
+                    <span
+                        className="urban-map-tool-dot"
+                        style={{
+                            background: isIdle
+                                ? "#cbd5df"
+                                : featureColor(selectedTool),
+                        }}
+                        aria-hidden="true"
+                    />
+                    {isIdle
+                        ? "Sin herramienta activa"
+                        : `Colocando: ${featureLabel(selectedTool)}`}
+                </div>
+
+                {tilesState !== "ready" && (
+                    <div className="urban-map-tile-status" role="status">
+                        {tilesState === "error"
+                            ? "No se pudo cargar el mapa base. Revisa tu conexión."
+                            : "Cargando mapa…"}
+                    </div>
+                )}
+
+                <div
+                    className="urban-map-attribution"
+                    onClick={(event) => event.stopPropagation()}
+                >
+                    ©{" "}
+                    <a
                         href="https://www.openstreetmap.org/copyright"
                         target="_blank"
                         rel="noreferrer"
                     >
                         OpenStreetMap
-                    </a> contributors
+                    </a>{" "}
+                    contributors
                 </div>
             </div>
 
-            <p className="urban-map-instructions">
-                Arrastra el mapa para desplazarte. Utiliza los botones + y −
-                para cambiar el nivel de acercamiento.
+            {features.length > 0 && (
+                <div className="urban-map-legend">
+                    <p className="urban-map-legend-title">
+                        {features.length}{" "}
+                        {features.length === 1
+                            ? "elemento colocado"
+                            : "elementos colocados"}
+                    </p>
+
+                    <ul>
+                        {placedGroups.map(([type, count]) => (
+                            <li key={type}>
+                                <span
+                                    className="urban-map-legend-dot"
+                                    style={{
+                                        background: featureColor(type),
+                                    }}
+                                    aria-hidden="true"
+                                />
+                                {featureLabel(type)}
+                                <strong>{count}</strong>
+                            </li>
+                        ))}
+                    </ul>
+
+                    <button
+                        type="button"
+                        className="urban-map-legend-clear"
+                        onClick={clearFeatures}
+                    >
+                        Quitar todos
+                    </button>
+                </div>
+            )}
+
+            <p
+                className="urban-map-instructions"
+                id="urban-map-instructions"
+            >
+                Arrastra el mapa para desplazarte y usa la rueda o los
+                botones + y − para cambiar el acercamiento. Con el teclado,
+                las flechas desplazan el mapa, + y − ajustan el zoom e Intro
+                coloca el elemento seleccionado en el centro. Haz clic en el
+                mapa para colocar un elemento y en un marcador para quitarlo.
+            </p>
+
+            <p className="traza-sr-only" role="status">
+                {announcement}
             </p>
         </section>
     );
