@@ -1,5 +1,4 @@
 .urban-map-section {
-  width: 100%;
   margin: 28px 0;
 }
 
@@ -13,44 +12,58 @@
 
 .urban-map-heading h2 {
   margin: 6px 0;
-  font-size: 1.5rem;
 }
 
 .urban-map-heading p {
   margin: 0;
-  color: #777;
-  font-size: 0.92rem;
+  max-width: 560px;
+  color: var(--traza-muted);
+  font-size: 13px;
+  line-height: 1.8;
 }
 
 .urban-map-reset {
-  border: 1px solid #d8d8d8;
+  flex-shrink: 0;
+  min-height: 44px;
+  padding: 10px 16px;
+  border: 1px solid var(--traza-border);
+  border-radius: 9px;
   background: white;
-  border-radius: 8px;
-  padding: 10px 14px;
-  cursor: pointer;
+  color: var(--traza-navy);
   font: inherit;
-  white-space: nowrap;
+  font-size: 13px;
+  font-weight: 600;
+  cursor: pointer;
 }
 
 .urban-map-reset:hover {
-  background: #f4f4f4;
+  background: var(--traza-bg);
 }
 
 .urban-map-canvas {
   position: relative;
   width: 100%;
-  height: 560px;
+  height: clamp(360px, 62vh, 560px);
   overflow: hidden;
   background: #e8ece7;
-  border: 1px solid #ddd;
-  border-radius: 12px;
+  border: 1px solid var(--traza-border);
+  border-radius: var(--traza-radius);
   cursor: grab;
   touch-action: none;
   user-select: none;
 }
 
+.urban-map-canvas.is-placing {
+  cursor: crosshair;
+}
+
 .urban-map-canvas.is-dragging {
   cursor: grabbing;
+}
+
+.urban-map-canvas:focus-visible {
+  outline: 3px solid var(--traza-green);
+  outline-offset: 3px;
 }
 
 .urban-map-tiles {
@@ -67,74 +80,6 @@
   -webkit-user-drag: none;
 }
 
-.urban-map-controls {
-  position: absolute;
-  top: 16px;
-  right: 16px;
-  display: flex;
-  flex-direction: column;
-  gap: 5px;
-  z-index: 2;
-}
-
-.urban-map-controls button {
-  width: 42px;
-  height: 42px;
-  border: 1px solid #ddd;
-  border-radius: 7px;
-  background: white;
-  font-size: 25px;
-  cursor: pointer;
-  box-shadow: 0 2px 6px rgba(0, 0, 0, 0.12);
-}
-
-.urban-map-controls button:disabled {
-  opacity: 0.4;
-  cursor: not-allowed;
-}
-
-.urban-map-zoom-label {
-  position: absolute;
-  top: 16px;
-  left: 16px;
-  padding: 7px 11px;
-  border-radius: 6px;
-  background: white;
-  font-size: 12px;
-  color: #444;
-  z-index: 2;
-}
-
-.urban-map-attribution {
-  position: absolute;
-  bottom: 0;
-  right: 0;
-  padding: 5px 8px;
-  background: rgba(255, 255, 255, 0.9);
-  font-size: 11px;
-  z-index: 2;
-}
-
-.urban-map-attribution a {
-  color: #2765a8;
-}
-
-.urban-map-instructions {
-  margin-top: 10px;
-  color: #777;
-  font-size: 0.85rem;
-}
-
-@media (max-width: 650px) {
-  .urban-map-heading {
-    align-items: flex-start;
-    flex-direction: column;
-  }
-
-  .urban-map-canvas {
-    height: 430px;
-  }
-}
 .urban-map-features {
   position: absolute;
   inset: 0;
@@ -152,13 +97,202 @@
   align-items: center;
   border: 2px solid white;
   border-radius: 50%;
-  background: #ffffff;
+  background: white;
+  box-shadow:
+    0 0 0 2px var(--feature-color, var(--traza-green)),
+    0 2px 7px rgba(20, 40, 63, 0.25);
   font-size: 20px;
   cursor: pointer;
   pointer-events: auto;
-  box-shadow: 0 2px 7px rgba(0, 0, 0, 0.25);
 }
 
 .urban-map-feature:hover {
   transform: translate(-50%, -50%) scale(1.15);
+}
+
+.urban-map-feature:focus-visible {
+  outline: 3px solid var(--traza-navy);
+  outline-offset: 3px;
+}
+
+.urban-map-controls {
+  position: absolute;
+  top: 16px;
+  right: 16px;
+  display: flex;
+  flex-direction: column;
+  gap: 5px;
+  z-index: 2;
+}
+
+.urban-map-controls button {
+  width: 42px;
+  height: 42px;
+  border: 1px solid var(--traza-border);
+  border-radius: 8px;
+  background: white;
+  color: var(--traza-navy);
+  font-size: 24px;
+  line-height: 1;
+  cursor: pointer;
+  box-shadow: 0 2px 6px rgba(20, 40, 63, 0.12);
+}
+
+.urban-map-controls button:hover:not(:disabled) {
+  background: var(--traza-bg);
+}
+
+.urban-map-controls button:disabled {
+  opacity: 0.4;
+  cursor: not-allowed;
+}
+
+.urban-map-zoom-label,
+.urban-map-tool-hint,
+.urban-map-tile-status {
+  position: absolute;
+  display: flex;
+  align-items: center;
+  gap: 8px;
+  padding: 7px 11px;
+  border-radius: 8px;
+  background: rgba(255, 255, 255, 0.94);
+  color: #33475b;
+  font-size: 12px;
+  line-height: 1.4;
+  z-index: 2;
+}
+
+.urban-map-zoom-label {
+  top: 16px;
+  left: 16px;
+  pointer-events: none;
+}
+
+.urban-map-tool-hint {
+  bottom: 16px;
+  left: 16px;
+  max-width: calc(100% - 32px);
+  pointer-events: none;
+}
+
+.urban-map-tool-dot,
+.urban-map-legend-dot {
+  width: 10px;
+  height: 10px;
+  flex-shrink: 0;
+  border-radius: 50%;
+}
+
+.urban-map-tile-status {
+  bottom: 60px;
+  left: 16px;
+  box-shadow: 0 2px 6px rgba(20, 40, 63, 0.12);
+  pointer-events: none;
+}
+
+.urban-map-attribution {
+  position: absolute;
+  bottom: 0;
+  right: 0;
+  padding: 5px 8px;
+  background: rgba(255, 255, 255, 0.9);
+  font-size: 11px;
+  z-index: 2;
+}
+
+.urban-map-attribution a {
+  color: #2765a8;
+}
+
+.urban-map-legend {
+  display: flex;
+  flex-wrap: wrap;
+  align-items: center;
+  gap: 12px 20px;
+  margin-top: 14px;
+  padding: 14px 18px;
+  border: 1px solid var(--traza-border);
+  border-radius: 12px;
+  background: white;
+}
+
+.urban-map-legend-title {
+  margin: 0;
+  font-size: 13px;
+  font-weight: 700;
+}
+
+.urban-map-legend ul {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 8px 16px;
+  margin: 0;
+  padding: 0;
+  list-style: none;
+}
+
+.urban-map-legend li {
+  display: flex;
+  align-items: center;
+  gap: 7px;
+  font-size: 12px;
+  color: var(--traza-muted);
+}
+
+.urban-map-legend li strong {
+  color: var(--traza-navy);
+}
+
+.urban-map-legend-clear {
+  margin-left: auto;
+  padding: 7px 12px;
+  border: 1px solid #fecdd3;
+  border-radius: 8px;
+  background: #fff1f2;
+  color: #be123c;
+  font: inherit;
+  font-size: 12px;
+  cursor: pointer;
+}
+
+.urban-map-legend-clear:hover {
+  background: #ffe4e6;
+}
+
+.urban-map-instructions {
+  margin-top: 10px;
+  color: var(--traza-muted);
+  font-size: 12px;
+  line-height: 1.8;
+}
+
+@media (max-width: 650px) {
+  .urban-map-heading {
+    align-items: flex-start;
+    flex-direction: column;
+  }
+
+  .urban-map-canvas {
+    height: clamp(320px, 58vh, 430px);
+  }
+
+  .urban-map-tool-hint {
+    bottom: 26px;
+  }
+
+  .urban-map-tile-status {
+    bottom: 70px;
+  }
+
+  .urban-map-legend {
+    align-items: flex-start;
+    flex-direction: column;
+    gap: 12px;
+  }
+
+  .urban-map-legend-clear {
+    margin-left: 0;
+    width: 100%;
+  }
 }
