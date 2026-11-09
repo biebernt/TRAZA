@@ -16,7 +16,7 @@ app.use("/api/walkability", require("./routes/walkability"));
 app.get("/api", (req, res) => {
   res.json({
     success: true,
-    message: "Bienvenido a la API de TRAZA"
+    message: "Bienvenido a la API de URBI"
   });
 });
 
@@ -39,10 +39,10 @@ async function startServer() {
     console.log("MongoDB conectado correctamente");
 
     app.listen(PORT, () => {
-      console.log(`TRAZA activo en puerto ${PORT}`);
+      console.log(`URBI activo en puerto ${PORT}`);
     });
   } catch (error) {
-    console.error("Error al iniciar TRAZA:", error.message);
+    console.error("Error al iniciar URBI:", error.message);
     process.exit(1);
   }
 }

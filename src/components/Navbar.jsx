@@ -1,6 +1,5 @@
 import { useState } from "react";
 import "./Navbar.css";
-import trazaLogo from "../resources/t..png";
 
 const navigation = [
   { id: "home", label: "Inicio", symbol: "⌂" },
@@ -23,8 +22,15 @@ export default function Navbar({ page, navigate }) {
   return (
     <aside className="traza-navbar">
       <div className="navbar-top">
-        <button type="button" className="brand" aria-label="TRAZA, ir al inicio" onClick={() => selectPage("home")}>
-          <img className="brand-logo" src={trazaLogo} alt="" width="44" height="44" />
+        <button type="button" className="brand" aria-label="URBI, ir al inicio" onClick={() => selectPage("home")}>
+          <svg className="brand-logo" viewBox="0 0 44 44" width="44" height="44" aria-hidden="true" focusable="false">
+            <rect width="44" height="44" rx="8" fill="#14283f" />
+            <rect x="7" y="9" width="9" height="9" rx="2.4" fill="#5fd3b5" />
+            <rect x="28" y="9" width="9" height="9" rx="2.4" fill="#c7b3ec" />
+            <rect x="7" y="21" width="9" height="9" rx="2.4" fill="#f2c56f" />
+            <rect x="28" y="21" width="9" height="9" rx="2.4" fill="#9db4c8" />
+            <rect x="17.5" y="26" width="9" height="9" rx="2.4" fill="#5fd3b5" />
+          </svg>
           <span><strong>URBI</strong><small>Urban Intelligence</small></span>
         </button>
         <button type="button" className="navbar-toggle" aria-expanded={menuOpen} aria-controls="traza-navigation" onClick={() => setMenuOpen(open => !open)}>{menuOpen ? "Cerrar" : "Menú"}<span aria-hidden="true">{menuOpen ? "×" : "☰"}</span></button>

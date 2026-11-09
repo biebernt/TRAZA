@@ -102,7 +102,7 @@ export default function UrbanStudio() {
         try {
             await saveProject({
                 name: name.trim(),
-                description: "Proyecto creado en TRAZA Urban Studio",
+                description: "Proyecto creado en URBI Urban Studio",
                 map
             });
 
@@ -182,7 +182,7 @@ export default function UrbanStudio() {
                 {/* Encabezado */}
                 <header>
                     <span className="traza-kicker">DISEÑA Y EXPLORA</span>
-                    <h1>TRAZA Urban Studio</h1>
+                    <h1>URBI Urban Studio</h1>
 
                     <p>
                         Diseña, modifica y analiza escenarios urbanos

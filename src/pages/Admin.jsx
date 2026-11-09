@@ -110,7 +110,7 @@ export default function Admin() {
   if (!token) {
     return (
       <div className="traza-page traza-container admin-page">
-        <header className="traza-page-header"><span className="traza-kicker">ESPACIO DE GESTIÓN</span><h1>Administración de TRAZA</h1><p>Consulta las solicitudes recibidas y da seguimiento a las ideas compartidas con la plataforma.</p></header>
+        <header className="traza-page-header"><span className="traza-kicker">ESPACIO DE GESTIÓN</span><h1>Administración de URBI</h1><p>Consulta las solicitudes recibidas y da seguimiento a las ideas compartidas con la plataforma.</p></header>
         <div className="admin-login-layout"><section><span className="traza-kicker">ACCESO RESTRINGIDO</span><h2>Todo el seguimiento,<br />en un mismo lugar.</h2><p>Este espacio está reservado para administradores con una cuenta previamente creada.</p><ul><li>Consulta los mensajes de contacto</li><li>Organiza solicitudes por estado</li><li>Cierra tu sesión al terminar</li></ul><p className="traza-form-help">La sesión dura hasta dos horas. Al salir de esta sección tendrás que volver a iniciar sesión.</p></section>
           <form className="traza-card traza-form" onSubmit={handleLogin} aria-busy={loading}>
             <h2>Iniciar sesión</h2><p className="traza-form-help">Utiliza tus credenciales de administración.</p>

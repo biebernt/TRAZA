@@ -5,7 +5,7 @@ export async function getServerStatus() {
   const response = await fetch(`${API_URL}/api/health`);
 
   if (!response.ok) {
-    throw new Error("No se pudo conectar con TRAZA");
+    throw new Error("No se pudo conectar con URBI");
   }
 
   return response.json();

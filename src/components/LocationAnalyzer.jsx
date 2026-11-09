@@ -20,7 +20,7 @@ export default function LocationAnalyzer() {
     <section className="location-analyzer" aria-labelledby="location-title">
       <header className="location-header">
         <span className="location-kicker">COMPARA CON CRITERIO</span>
-        <h1 id="location-title">TRAZA Location Intelligence</h1>
+        <h1 id="location-title">URBI Location Intelligence</h1>
         <p>Una ubicación puede ofrecer distintas ventajas según tu negocio. Compara zonas y descubre qué hay detrás de cada puntuación.</p>
         <span className="location-demo">Datos ficticios · Análisis demostrativo</span>
       </header>

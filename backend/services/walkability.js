@@ -57,7 +57,7 @@ function createPlacesService({ fetchImpl = globalThis.fetch, now = Date.now } = 
       const url = new URL("https://overpass-api.de/api/interpreter");
       url.searchParams.set("data", query);
       const response = await fetchImpl(url, {
-        headers: { Accept: "application/json", "User-Agent": "TRAZA-Educational-Pilot/1.0" },
+        headers: { Accept: "application/json", "User-Agent": "URBI-Educational-Pilot/1.0" },
         signal: AbortSignal.timeout(TIMEOUT_MS)
       });
       if (!response.ok) throw new Error("Upstream unavailable");
