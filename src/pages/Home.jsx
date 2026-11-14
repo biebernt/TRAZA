@@ -26,7 +26,7 @@ export default function Home({ navigate }) {
           <span className="home-hero-note">Herramientas visuales para explorar mejores decisiones.</span>
         </div>
         <div className="home-preview" aria-label="Ilustración de un escenario urbano de ejemplo">
-          <div className="home-preview-heading"><span>EXPLORACIÓN TERRITORIAL</span><span className="home-preview-dot" aria-hidden="true" /></div>
+          <div className="home-preview-heading"><span>EXPLORACIÓN TERRITORIAL</span></div>
           <div className="home-preview-map" aria-hidden="true">{previewMap.map((type, index) => <span key={index} className={`home-tile home-tile-${type}`} />)}</div>
           <div className="home-preview-caption"><strong>Un espacio, muchas posibilidades.</strong><span>Urban Studio</span></div>
           <div className="home-map-legend" aria-hidden="true"><span>Vivienda</span><span>Áreas verdes</span><span>Comercio</span></div>
