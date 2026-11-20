@@ -1,4 +1,4 @@
-import { useState, useEffect } from "react";
+import { useState, useEffect, useCallback } from "react";
 import {
     getServerStatus,
     saveProject,
@@ -7,6 +7,10 @@ import {
 
 import UrbanStats from "../components/UrbanStats";
 import UrbanToolbar from "../components/UrbanToolbar";
+import AreaBar from "../components/AreaBar";
+
+import { useArea } from "../state/areaContext";
+import { bboxCenter } from "../utils/geo";
 
 import { CELL_TYPES } from "../utils/urbanAnalysis";
 import "./UrbanStudio.css";
@@ -29,6 +33,13 @@ export default function UrbanStudio() {
     const [messageError, setMessageError] = useState(false);
     const [projectName, setProjectName] = useState("");
     const [features, setFeatures] = useState([]);
+    const [mapView, setMapView] = useState(null);
+
+    const { area, setArea } = useArea();
+
+    const handleViewChange = useCallback(view => {
+        setMapView(view);
+    }, []);
 
     function addMapFeature(feature) {
         if (selectedTool === "empty") {
@@ -103,7 +114,15 @@ export default function UrbanStudio() {
             await saveProject({
                 name: name.trim(),
                 description: "Proyecto creado en URBI Urban Studio",
-                map
+                mode: "grid",
+                map,
+                area: {
+                    kind: "viewport",
+                    name: area.name,
+                    center: bboxCenter(area.bbox),
+                    zoom: mapView?.zoom,
+                    bbox: area.bbox
+                }
             });
 
             setMessage("Proyecto guardado correctamente");
@@ -148,6 +167,13 @@ export default function UrbanStudio() {
 
             setMap([...latestProject.map]);
             setProjectName(latestProject.name);
+
+            if (Array.isArray(latestProject.area?.bbox)) {
+                setArea({
+                    bbox: latestProject.area.bbox,
+                    name: latestProject.area.name || latestProject.name
+                });
+            }
 
             setMessage(
                 `Proyecto cargado correctamente: ${latestProject.name}`
@@ -213,7 +239,11 @@ export default function UrbanStudio() {
                     </article>
                 </section>
 
+                <AreaBar view={mapView} disabled={saving || loading} />
+
                 <UrbanMap
+                    area={area}
+                    onViewChange={handleViewChange}
                     features={features}
                     selectedTool={selectedTool}
                     onAddFeature={addMapFeature}

@@ -1,5 +1,17 @@
 import { useCallback, useEffect, useMemo, useRef, useState } from "react";
 import { CELL_TYPES } from "../utils/urbanAnalysis";
+import {
+    MAX_ZOOM,
+    MIN_ZOOM,
+    TILE_SIZE,
+    bboxCenter,
+    bboxFromView,
+    latLonToPixel,
+    pixelToLatLon,
+    wrapTileX,
+    zoomForBbox,
+    zoomForMaxViewArea,
+} from "../utils/geo";
 import "./UrbanMap.css";
 
 const INITIAL_CENTER = {
@@ -8,9 +20,6 @@ const INITIAL_CENTER = {
 };
 
 const INITIAL_ZOOM = 16;
-const TILE_SIZE = 256;
-const MIN_ZOOM = 13;
-const MAX_ZOOM = 19;
 const DRAG_THRESHOLD = 5;
 const KEYBOARD_PAN = 90;
 const CLICK_AFTER_DRAG_MS = 350;
@@ -31,53 +40,98 @@ function featureColor(type) {
     return CELL_TYPES[type]?.color ?? "#159c83";
 }
 
-function latLonToPixel(lat, lon, zoom) {
-    const scale = TILE_SIZE * 2 ** zoom;
-    const safeLat = Math.max(-85.0511, Math.min(85.0511, lat));
-    const sinLat = Math.sin((safeLat * Math.PI) / 180);
-
-    return {
-        x: ((lon + 180) / 360) * scale,
-        y:
-            (0.5 -
-                Math.log((1 + sinLat) / (1 - sinLat)) /
-                (4 * Math.PI)) *
-            scale,
-    };
-}
-
-function pixelToLatLon(x, y, zoom) {
-    const scale = TILE_SIZE * 2 ** zoom;
-    const lon = (x / scale) * 360 - 180;
-    const n = Math.PI - (2 * Math.PI * y) / scale;
-    const lat = (180 / Math.PI) * Math.atan(Math.sinh(n));
-
-    return { lat, lon };
-}
-
-function wrapTileX(x, total) {
-    return ((x % total) + total) % total;
-}
-
 export default function UrbanMap({
     features = [],
     selectedTool = "house",
+    area = null,
     onAddFeature,
     onRemoveFeature,
     onClearFeatures,
+    onViewChange,
 }) {
     const mapRef = useRef(null);
     const dragRef = useRef(null);
     const lastDragEndRef = useRef(0);
 
-    const [center, setCenter] = useState(INITIAL_CENTER);
+    const [center, setCenter] = useState(() =>
+        area?.bbox ? bboxCenter(area.bbox) : INITIAL_CENTER
+    );
     const [zoom, setZoom] = useState(INITIAL_ZOOM);
     const [size, setSize] = useState({ width: 0, height: 0 });
     const [isDragging, setIsDragging] = useState(false);
     const [tilesState, setTilesState] = useState("loading");
     const [announcement, setAnnouncement] = useState("");
+    const [appliedAreaRevision, setAppliedAreaRevision] = useState(
+        area?.revision ?? null
+    );
+    const [initialFitDone, setInitialFitDone] = useState(false);
 
     const isIdle = selectedTool === "empty";
+
+    const currentView =
+        size.width > 0 && size.height > 0
+            ? bboxFromView({
+                center,
+                zoom,
+                width: size.width,
+                height: size.height,
+            })
+            : null;
+
+    // La vista inicial se ajusta para no superar el área máxima permitida.
+    if (!initialFitDone && size.width > 0 && size.height > 0) {
+        setInitialFitDone(true);
+
+        const initialZoom = zoomForMaxViewArea(center, size);
+
+        if (initialZoom !== null) setZoom(initialZoom);
+    }
+
+    // Un cambio de área mueve el encuadre; si el área ya coincide con la
+    // vista actual ("usar la vista actual") se conserva el encuadre.
+    if (
+        area?.bbox &&
+        area.revision !== appliedAreaRevision &&
+        size.width > 0 &&
+        size.height > 0
+    ) {
+        setAppliedAreaRevision(area.revision);
+
+        const sameAsView =
+            currentView &&
+            currentView.every(
+                (value, index) =>
+                    Math.abs(value - area.bbox[index]) < 1e-9
+            );
+
+        if (!sameAsView) {
+            const targetCenter = bboxCenter(area.bbox);
+            const fittedZoom = zoomForBbox(area.bbox, size);
+            const limitZoom = zoomForMaxViewArea(targetCenter, size);
+            const targetZoom = Math.max(
+                fittedZoom ?? MIN_ZOOM,
+                limitZoom ?? MIN_ZOOM
+            );
+
+            setCenter(targetCenter);
+
+            if (targetZoom !== zoom) setZoom(targetZoom);
+        }
+    }
+
+    // Se informa la vista al terminar de arrastrar, no en cada movimiento.
+    useEffect(() => {
+        if (!onViewChange || isDragging || !size.width || !size.height) {
+            return;
+        }
+
+        onViewChange({
+            center,
+            zoom,
+            width: size.width,
+            height: size.height,
+        });
+    }, [center, zoom, size, isDragging, onViewChange]);
 
     useEffect(() => {
         const element = mapRef.current;
@@ -425,6 +479,33 @@ export default function UrbanMap({
         setAnnouncement("Se quitaron todos los elementos del mapa.");
     }
 
+    const areaFrame = useMemo(() => {
+        if (!area?.bbox || !size.width || !size.height) return null;
+
+        const centerPixel = latLonToPixel(
+            center.lat,
+            center.lon,
+            zoom
+        );
+        const northWest = latLonToPixel(
+            area.bbox[2],
+            area.bbox[1],
+            zoom
+        );
+        const southEast = latLonToPixel(
+            area.bbox[0],
+            area.bbox[3],
+            zoom
+        );
+
+        return {
+            left: northWest.x - centerPixel.x + size.width / 2,
+            top: northWest.y - centerPixel.y + size.height / 2,
+            width: southEast.x - northWest.x,
+            height: southEast.y - northWest.y,
+        };
+    }, [area, center, zoom, size]);
+
     const placedGroups = useMemo(() => {
         const counts = new Map();
 
@@ -452,7 +533,9 @@ export default function UrbanMap({
             <div className="urban-map-heading">
                 <div>
                     <span className="traza-kicker">MAPA INTERACTIVO</span>
-                    <h2 id="urban-map-title">Ciudad del Saber</h2>
+                    <h2 id="urban-map-title">
+                        {area?.name ?? "Ciudad del Saber"}
+                    </h2>
                     <p>
                         Explora el área y prepara tu escenario de planificación
                         urbana.
@@ -482,7 +565,9 @@ export default function UrbanMap({
                     .filter(Boolean)
                     .join(" ")}
                 role="region"
-                aria-label="Mapa interactivo de Ciudad del Saber"
+                aria-label={`Mapa interactivo de ${
+                    area?.name ?? "Ciudad del Saber"
+                }`}
                 aria-describedby="urban-map-instructions"
                 tabIndex={0}
                 onClick={handleMapClick}
@@ -511,6 +596,23 @@ export default function UrbanMap({
                         />
                     ))}
                 </div>
+
+                {areaFrame && (
+                    <div
+                        className="urban-map-area-frame"
+                        aria-hidden="true"
+                        style={{
+                            left: `${areaFrame.left}px`,
+                            top: `${areaFrame.top}px`,
+                            width: `${areaFrame.width}px`,
+                            height: `${areaFrame.height}px`,
+                        }}
+                    >
+                        <span className="urban-map-area-frame-label">
+                            {area.name}
+                        </span>
+                    </div>
+                )}
 
                 <div className="urban-map-features">
                     {features.map((feature) => {

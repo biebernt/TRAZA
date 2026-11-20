@@ -1,0 +1,82 @@
+.area-bar {
+  display: flex;
+  flex-wrap: wrap;
+  align-items: flex-start;
+  justify-content: space-between;
+  gap: 18px 28px;
+  margin: 24px 0;
+  padding: 22px 24px;
+  border: 1px solid var(--traza-border);
+  border-radius: var(--traza-radius);
+  background: white;
+  color: var(--traza-navy);
+}
+
+.area-bar-summary {
+  min-width: 0;
+  flex: 1 1 320px;
+}
+
+.area-bar-summary h2 {
+  margin: 8px 0 6px;
+  font-size: clamp(18px, 2vw, 22px);
+  line-height: 1.3;
+  letter-spacing: -0.3px;
+}
+
+.area-bar-meta {
+  margin: 0;
+  color: var(--traza-muted);
+  font-size: 13px;
+  line-height: 1.8;
+  font-variant-numeric: tabular-nums;
+}
+
+.area-bar-meta strong {
+  color: var(--traza-navy);
+}
+
+.area-bar-note {
+  margin: 8px 0 0;
+  color: var(--traza-muted);
+  font-size: 12px;
+  line-height: 1.7;
+}
+
+.area-bar-actions {
+  display: flex;
+  flex-wrap: wrap;
+  align-items: center;
+  gap: 10px;
+}
+
+.area-bar-actions .traza-btn {
+  min-height: 44px;
+}
+
+.area-bar-hint {
+  flex-basis: 100%;
+  margin: 0;
+  color: var(--traza-muted);
+  font-size: 12px;
+  line-height: 1.6;
+}
+
+.area-bar-error {
+  flex-basis: 100%;
+  margin: 0;
+}
+
+@media (max-width: 640px) {
+  .area-bar {
+    padding: 18px;
+  }
+
+  .area-bar-actions {
+    width: 100%;
+  }
+
+  .area-bar-actions .traza-btn {
+    flex: 1 1 100%;
+  }
+}
