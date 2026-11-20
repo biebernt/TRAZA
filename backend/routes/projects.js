@@ -12,12 +12,34 @@ router.get("/", async (req, res) => {
 
 router.post("/", async (req, res) => {
   try {
-    const { name, description, map } = req.body;
+    const {
+      name,
+      description,
+      map,
+      mode,
+      area,
+      ownerKey,
+      status,
+      features,
+      interventions,
+      scenarios,
+      analysis,
+      baseSnapshot,
+    } = req.body || {};
 
     const project = await Project.create({
       name,
       description,
-      map
+      map,
+      mode,
+      area,
+      ownerKey,
+      status,
+      features,
+      interventions,
+      scenarios,
+      analysis,
+      baseSnapshot,
     });
 
     res.status(201).json(project);
