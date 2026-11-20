@@ -47,6 +47,7 @@ export default function UrbanMap({
     onAddFeature,
     onRemoveFeature,
     onClearFeatures,
+    onRejectPlacement,
     onViewChange,
 }) {
     const mapRef = useRef(null);
@@ -61,6 +62,7 @@ export default function UrbanMap({
     const [isDragging, setIsDragging] = useState(false);
     const [tilesState, setTilesState] = useState("loading");
     const [announcement, setAnnouncement] = useState("");
+    const [warning, setWarning] = useState("");
     const [appliedAreaRevision, setAppliedAreaRevision] = useState(
         area?.revision ?? null
     );
@@ -368,6 +370,15 @@ export default function UrbanMap({
         }
     }
 
+    // Los elementos solo se colocan dentro del área de trabajo seleccionada.
+    function isInsideArea({ lat, lon }) {
+        if (!area?.bbox) return true;
+
+        const [south, west, north, east] = area.bbox;
+
+        return lat >= south && lat <= north && lon >= west && lon <= east;
+    }
+
     function placeFeatureAt(offsetX, offsetY) {
         if (!mapRef.current || !onAddFeature) return false;
 
@@ -390,6 +401,17 @@ export default function UrbanMap({
             zoom
         );
 
+        if (!isInsideArea(coordinates)) {
+            const reason =
+                "El elemento debe quedar dentro del área de trabajo.";
+
+            setAnnouncement(reason);
+            setWarning(reason);
+            onRejectPlacement?.(reason);
+
+            return false;
+        }
+
         onAddFeature({
             id: `${Date.now()}-${Math.random()
                 .toString(36)
@@ -399,6 +421,7 @@ export default function UrbanMap({
             lon: coordinates.lon,
         });
 
+        setWarning("");
         setAnnouncement(
             `${featureLabel(selectedTool)} añadido al mapa.`
         );
@@ -723,6 +746,12 @@ export default function UrbanMap({
                     })}`}
                 </div>
 
+                {warning && (
+                    <p className="urban-map-warning" role="status">
+                        {warning}
+                    </p>
+                )}
+
                 <div className="urban-map-tool-hint">
                     <span
                         className="urban-map-tool-dot"
@@ -805,7 +834,8 @@ export default function UrbanMap({
                 botones + y − para cambiar el acercamiento. Con el teclado,
                 las flechas desplazan el mapa, + y − ajustan el zoom e Intro
                 coloca el elemento seleccionado en el centro. Haz clic en el
-                mapa para colocar un elemento y en un marcador para quitarlo.
+                mapa para colocar un elemento dentro del área de trabajo y en
+                un marcador para quitarlo.
             </p>
 
             <p className="traza-sr-only" role="status">

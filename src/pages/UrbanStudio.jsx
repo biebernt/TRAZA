@@ -43,12 +43,19 @@ export default function UrbanStudio() {
 
     function addMapFeature(feature) {
         if (selectedTool === "empty") {
+            setMessageError(true);
             setMessage("Selecciona una herramienta para colocar elementos.");
             return;
         }
 
         setFeatures((previous) => [...previous, feature]);
+        setMessageError(false);
         setMessage("");
+    }
+
+    function rejectMapFeature(reason) {
+        setMessageError(true);
+        setMessage(reason);
     }
 
     function removeMapFeature(id) {
@@ -116,6 +123,12 @@ export default function UrbanStudio() {
                 description: "Proyecto creado en URBI Urban Studio",
                 mode: "grid",
                 map,
+                features: features.map(({ id, type, lat, lon }) => ({
+                    id,
+                    type,
+                    lat,
+                    lon
+                })),
                 area: {
                     kind: "viewport",
                     name: area.name,
@@ -167,6 +180,26 @@ export default function UrbanStudio() {
 
             setMap([...latestProject.map]);
             setProjectName(latestProject.name);
+
+            const projectFeatures = Array.isArray(latestProject.features)
+                ? latestProject.features
+                      .filter(
+                          (feature) =>
+                              feature &&
+                              typeof feature.id === "string" &&
+                              Object.hasOwn(types, feature.type) &&
+                              Number.isFinite(feature.lat) &&
+                              Number.isFinite(feature.lon)
+                      )
+                      .map(({ id, type, lat, lon }) => ({
+                          id,
+                          type,
+                          lat,
+                          lon
+                      }))
+                : [];
+
+            setFeatures(projectFeatures);
 
             if (Array.isArray(latestProject.area?.bbox)) {
                 setArea({
@@ -249,6 +282,7 @@ export default function UrbanStudio() {
                     onAddFeature={addMapFeature}
                     onRemoveFeature={removeMapFeature}
                     onClearFeatures={clearMapFeatures}
+                    onRejectPlacement={rejectMapFeature}
                 />
 
                 {/* Herramientas */}
@@ -280,6 +314,11 @@ export default function UrbanStudio() {
                 </section>
 
                 {/* Análisis urbano */}
+                <p className="traza-form-help urban-disclaimer">
+                    Los elementos del mapa se colocan sobre el área de trabajo
+                    y se guardan con sus coordenadas al guardar el proyecto.
+                </p>
+
                 <UrbanStats map={map} />
                 <p className="traza-form-help urban-disclaimer">Indicadores demostrativos basados en reglas de ejemplo, sin validación normativa. No sustituyen una evaluación urbanística profesional.</p>
 
