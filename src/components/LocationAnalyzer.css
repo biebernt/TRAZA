@@ -43,9 +43,26 @@
 .location-breakdown li { margin-block: 14px; }
 .location-breakdown li strong, .location-breakdown li span { display: block; }
 .location-breakdown li span { color: #526273; }
+.location-area { padding: 28px; margin-top: 26px; }
+.location-area-heading { display: flex; justify-content: space-between; align-items: flex-start; gap: 20px; flex-wrap: wrap; }
+.location-area-heading p { margin: 10px 0 0; max-width: 620px; font-size: 13px; line-height: 1.8; color: var(--traza-muted); }
+.location-area-summary { margin-top: 22px; padding: 20px 22px; border: 1px solid #b8dfd2; border-radius: 14px; background: #eaf7f3; }
+.location-area-summary p { margin: 0; font-size: 13px; line-height: 1.8; color: #33475b; }
+.location-area-metrics { display: grid; grid-template-columns: repeat(4, minmax(0, 1fr)); gap: 14px; margin: 22px 0 0; }
+.location-area-metrics > div { padding: 16px; border-radius: 10px; background: var(--traza-bg); }
+.location-area-metrics dt { font-size: 12px; color: var(--traza-muted); }
+.location-area-metrics dd { display: flex; flex-direction: column; gap: 4px; margin: 8px 0 0; font-size: 12px; line-height: 1.6; }
+.location-area-metrics dd strong { font-size: 24px; color: var(--traza-green-dark); }
+.location-area-metrics dd strong span { font-size: 12px; color: var(--traza-muted); font-weight: 400; }
+.location-area-raw { color: #33475b; font-weight: 600; }
+.location-area-rule { font-size: 11px; color: var(--traza-muted); }
+.location-area-source { margin-top: 18px; font-size: 12px; line-height: 1.7; color: var(--traza-muted); }
+.location-area-source p { margin: 0 0 4px; }
+.location-area-limits { margin: 16px 0 0; padding-left: 18px; font-size: 12px; line-height: 1.7; color: #526273; }
+.location-area-limits li { margin-block: 6px; }
 .location-method { display: grid; grid-template-columns: .8fr 1.2fr; gap: 32px; padding: 28px; margin-top: 28px; }
 .location-method h2 { margin-top: 12px; }
 .location-method p { font-size: 13px; line-height: 1.8; color: #526273; margin: 0 0 14px; }
 .location-method .location-method-note { font-size: 12px; margin-bottom: 0; }
 @media (max-width: 1150px) { .location-results { grid-template-columns: 1fr; } .location-section-heading { flex-direction: column; gap: 0; } }
-@media (max-width: 650px) { .location-settings, .location-method { grid-template-columns: 1fr; padding: 22px; } .location-weights { grid-template-columns: repeat(2, minmax(0, 1fr)); } .location-summary { padding: 22px; } .location-summary h2 span { display: block; margin: 8px 0 0; } }
+@media (max-width: 650px) { .location-area-metrics { grid-template-columns: repeat(2, minmax(0, 1fr)); } .location-area { padding: 22px; } .location-settings, .location-method { grid-template-columns: 1fr; padding: 22px; } .location-weights { grid-template-columns: repeat(2, minmax(0, 1fr)); } .location-summary { padding: 22px; } .location-summary h2 span { display: block; margin: 8px 0 0; } }

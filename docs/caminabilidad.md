@@ -10,10 +10,11 @@ Iniciar el backend en `backend` con su `MONGODB_URI` configurada y `npm start`.
 Iniciar el frontend en la raíz con `npm run dev` y abrir **Caminabilidad**.
 Pulsar **Consultar servicios**; no se hacen consultas externas por cada render.
 
-`GET /api/walkability/places` consulta un radio geográfico de 1500 metros desde
-9.0025, -79.5804. Es un punto de referencia del piloto, no una delimitación oficial.
-Incluye educación, salud, alimentos y parques registrados en OpenStreetMap.
-Puede incluir lugares fuera del recinto de Ciudad del Saber.
+`GET /api/walkability/places?bbox=sur,oeste,norte,este` consulta el área de
+trabajo elegida en el Urban Studio (máximo 2 km², la misma cota que el resto de
+la plataforma). Sin `bbox` se mantiene el radio piloto de 1500 metros desde
+9.0025, -79.5804. Incluye educación, salud, alimentos y parques registrados en
+OpenStreetMap; el área describe lo mapeado, no una delimitación oficial.
 Los centros de edificios/polígonos no equivalen a sus entradas peatonales.
 Un resultado vacío no implica ausencia de servicios.
 
@@ -35,7 +36,8 @@ esta entrega: la integración de tiempos de OpenRouteService será posterior.
 
 ## Comportamiento ante fallos
 
-- Caché en memoria por 30 minutos, compartida por todos los usuarios del proceso.
+- Caché en memoria por 30 minutos y por área consultada, compartida por todos
+  los usuarios del proceso.
 - Una solicitud al proveedor para peticiones simultáneas.
 - Tiempo límite de 25 segundos; pausa de un minuto después de un fallo.
 - Si había datos, se conservan con fecha original y `cache.stale: true`.

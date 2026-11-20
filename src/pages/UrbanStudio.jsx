@@ -2,12 +2,16 @@ import { useState, useEffect, useCallback } from "react";
 import {
     getServerStatus,
     saveProject,
+    updateProject,
+    duplicateProject,
+    deleteProject,
     getProjects
 } from "../services/api";
 
 import UrbanStats from "../components/UrbanStats";
 import UrbanToolbar from "../components/UrbanToolbar";
 import AreaBar from "../components/AreaBar";
+import ScenarioComparison from "../components/ScenarioComparison";
 
 import { useArea } from "../state/areaContext";
 import { bboxCenter } from "../utils/geo";
@@ -34,6 +38,10 @@ export default function UrbanStudio() {
     const [projectName, setProjectName] = useState("");
     const [features, setFeatures] = useState([]);
     const [mapView, setMapView] = useState(null);
+    const [projects, setProjects] = useState([]);
+    const [projectsError, setProjectsError] = useState("");
+    const [currentProjectId, setCurrentProjectId] = useState(null);
+    const [baseline, setBaseline] = useState(null);
 
     const { area, setArea } = useArea();
 
@@ -68,7 +76,7 @@ export default function UrbanStudio() {
         setFeatures([]);
     }
 
-    // Comprobar conexión con el backend
+    // Comprobar conexión con el backend y traer los proyectos guardados
     useEffect(() => {
         getServerStatus()
             .then(status => {
@@ -77,6 +85,36 @@ export default function UrbanStudio() {
             .catch(() => {
                 setServerStatus("Servidor desconectado");
             });
+    }, []);
+
+    const refreshProjects = useCallback(async () => {
+        try {
+            setProjects(await getProjects());
+            setProjectsError("");
+        } catch (error) {
+            setProjects([]);
+            setProjectsError(error.message);
+        }
+    }, []);
+
+    useEffect(() => {
+        let active = true;
+
+        getProjects()
+            .then(list => {
+                if (!active) return;
+                setProjects(list);
+                setProjectsError("");
+            })
+            .catch(error => {
+                if (!active) return;
+                setProjects([]);
+                setProjectsError(error.message);
+            });
+
+        return () => {
+            active = false;
+        };
     }, []);
 
     // Editar una celda del mapa
@@ -102,12 +140,57 @@ export default function UrbanStudio() {
         setMessage("Mapa y elementos reiniciados correctamente");
     }
 
-    // Guardar proyecto en MongoDB
+    function readProjectFeatures(project) {
+        return Array.isArray(project.features)
+            ? project.features
+                  .filter(
+                      feature =>
+                          feature &&
+                          typeof feature.id === "string" &&
+                          Object.hasOwn(types, feature.type) &&
+                          Number.isFinite(feature.lat) &&
+                          Number.isFinite(feature.lon)
+                  )
+                  .map(({ id, type, lat, lon }) => ({ id, type, lat, lon }))
+            : [];
+    }
+
+    function projectPayload(name) {
+        return {
+            name,
+            description: "Proyecto creado en URBI Urban Studio",
+            mode: "grid",
+            map,
+            features: features.map(({ id, type, lat, lon }) => ({
+                id,
+                type,
+                lat,
+                lon
+            })),
+            area: {
+                kind: "viewport",
+                name: area.name,
+                center: bboxCenter(area.bbox),
+                zoom: mapView?.zoom,
+                bbox: area.bbox
+            }
+        };
+    }
+
+    function rememberBaseline(name, projectMap, projectFeatures) {
+        setBaseline({
+            name,
+            map: [...projectMap],
+            features: [...projectFeatures]
+        });
+    }
+
+    // Guardar el proyecto: actualiza el abierto o crea uno nuevo.
     async function handleSave(event) {
         event.preventDefault();
-        const name = projectName;
+        const name = projectName.trim();
 
-        if (!name.trim()) {
+        if (!name) {
             setMessageError(true);
             setMessage("Escribe un nombre para tu proyecto.");
             return;
@@ -117,28 +200,22 @@ export default function UrbanStudio() {
         setSaving(true);
         setMessage("");
 
-        try {
-            await saveProject({
-                name: name.trim(),
-                description: "Proyecto creado en URBI Urban Studio",
-                mode: "grid",
-                map,
-                features: features.map(({ id, type, lat, lon }) => ({
-                    id,
-                    type,
-                    lat,
-                    lon
-                })),
-                area: {
-                    kind: "viewport",
-                    name: area.name,
-                    center: bboxCenter(area.bbox),
-                    zoom: mapView?.zoom,
-                    bbox: area.bbox
-                }
-            });
+        const updating = Boolean(currentProjectId);
 
-            setMessage("Proyecto guardado correctamente");
+        try {
+            const saved = updating
+                ? await updateProject(currentProjectId, projectPayload(name))
+                : await saveProject(projectPayload(name));
+
+            setCurrentProjectId(saved._id);
+            setProjectName(saved.name);
+            rememberBaseline(saved.name, map, features);
+            setMessage(
+                updating
+                    ? "Proyecto actualizado correctamente"
+                    : "Proyecto guardado correctamente"
+            );
+            refreshProjects();
         } catch (error) {
             setMessageError(true);
             setMessage(
@@ -149,73 +226,101 @@ export default function UrbanStudio() {
         }
     }
 
-    // Cargar el último proyecto guardado
-    async function handleLoad() {
-        if (map.some(cell => cell !== "empty") && !window.confirm("Cargar el último proyecto reemplazará el mapa actual. ¿Quieres continuar?")) return;
+    // Abre un proyecto concreto de la lista.
+    function handleLoadProject(project) {
+        if (
+            (map.some(cell => cell !== "empty") || features.length > 0) &&
+            !window.confirm("Abrir un proyecto reemplazará el mapa actual. ¿Quieres continuar?")
+        ) {
+            return;
+        }
+
         setMessageError(false);
-        setLoading(true);
         setMessage("");
 
         try {
-            const projects = await getProjects();
-
-            if (!projects.length) {
-                setMessage("Todavía no hay proyectos guardados");
-                return;
-            }
-
-            const latestProject = projects[0];
-
             if (
-                !Array.isArray(latestProject.map) ||
-                latestProject.map.length !== 100 ||
-                !latestProject.map.every(cell =>
-                    Object.hasOwn(types, cell)
-                )
+                !Array.isArray(project.map) ||
+                project.map.length !== 100 ||
+                !project.map.every(cell => Object.hasOwn(types, cell))
             ) {
                 throw new Error(
                     "El proyecto guardado contiene un mapa inválido"
                 );
             }
 
-            setMap([...latestProject.map]);
-            setProjectName(latestProject.name);
+            const projectFeatures = readProjectFeatures(project);
 
-            const projectFeatures = Array.isArray(latestProject.features)
-                ? latestProject.features
-                      .filter(
-                          (feature) =>
-                              feature &&
-                              typeof feature.id === "string" &&
-                              Object.hasOwn(types, feature.type) &&
-                              Number.isFinite(feature.lat) &&
-                              Number.isFinite(feature.lon)
-                      )
-                      .map(({ id, type, lat, lon }) => ({
-                          id,
-                          type,
-                          lat,
-                          lon
-                      }))
-                : [];
-
+            setMap([...project.map]);
+            setProjectName(project.name);
+            setCurrentProjectId(project._id);
             setFeatures(projectFeatures);
+            rememberBaseline(project.name, project.map, projectFeatures);
 
-            if (Array.isArray(latestProject.area?.bbox)) {
+            if (Array.isArray(project.area?.bbox)) {
                 setArea({
-                    bbox: latestProject.area.bbox,
-                    name: latestProject.area.name || latestProject.name
+                    bbox: project.area.bbox,
+                    name: project.area.name || project.name
                 });
             }
 
-            setMessage(
-                `Proyecto cargado correctamente: ${latestProject.name}`
-            );
+            setMessage(`Proyecto cargado correctamente: ${project.name}`);
         } catch (error) {
             setMessageError(true);
-            setMessage(
-                `Error al cargar: ${error.message}`
-            );
+            setMessage(`Error al cargar: ${error.message}`);
+        }
+    }
+
+    async function handleDuplicate(project) {
+        setMessageError(false);
+        setLoading(true);
+        setMessage("");
+
+        try {
+            const copy = await duplicateProject(project._id);
+            setMessage(`Proyecto duplicado: ${copy.name}`);
+            await refreshProjects();
+        } catch (error) {
+            setMessageError(true);
+            setMessage(`Error al duplicar: ${error.message}`);
+        } finally {
+            setLoading(false);
+        }
+    }
+
+    function handleNewProject() {
+        setCurrentProjectId(null);
+        setBaseline(null);
+        setMessageError(false);
+        setMessage("El próximo guardado creará un proyecto nuevo.");
+    }
+
+    async function handleDelete(project) {
+        if (
+            !window.confirm(
+                `¿Eliminar el proyecto "${project.name}"? Esta acción no se puede deshacer.`
+            )
+        ) {
+            return;
+        }
+
+        setMessageError(false);
+        setLoading(true);
+        setMessage("");
+
+        try {
+            await deleteProject(project._id);
+
+            if (currentProjectId === project._id) {
+                setCurrentProjectId(null);
+                setBaseline(null);
+            }
+
+            setMessage(`Proyecto eliminado: ${project.name}`);
+            await refreshProjects();
+        } catch (error) {
+            setMessageError(true);
+            setMessage(`Error al eliminar: ${error.message}`);
         } finally {
             setLoading(false);
         }
@@ -320,6 +425,12 @@ export default function UrbanStudio() {
                 </p>
 
                 <UrbanStats map={map} />
+
+                <ScenarioComparison
+                    baseline={baseline}
+                    map={map}
+                    features={features}
+                />
                 <p className="traza-form-help urban-disclaimer">Indicadores demostrativos basados en reglas de ejemplo, sin validación normativa. No sustituyen una evaluación urbanística profesional.</p>
 
                 {/* Gestión de proyectos */}
@@ -339,19 +450,23 @@ export default function UrbanStudio() {
                                 className="traza-btn traza-btn-primary"
                                 disabled={saving || loading}
                             >
-                                {saving ? "Guardando..." : "Guardar proyecto"}
+                                {saving
+                                    ? "Guardando..."
+                                    : currentProjectId
+                                      ? "Actualizar proyecto"
+                                      : "Guardar proyecto"}
                             </button>
 
-                            <button
-                                type="button"
-                                className="traza-btn traza-btn-secondary"
-                                onClick={handleLoad}
-                                disabled={loading || saving}
-                            >
-                                {loading
-                                    ? "Cargando..."
-                                    : "Cargar último proyecto"}
-                            </button>
+                            {currentProjectId && (
+                                <button
+                                    type="button"
+                                    className="traza-btn traza-btn-secondary"
+                                    onClick={handleNewProject}
+                                    disabled={saving || loading}
+                                >
+                                    Guardar como nuevo
+                                </button>
+                            )}
                         </div>
 
                     </form>
@@ -361,6 +476,87 @@ export default function UrbanStudio() {
                             {message}
                         </p>
                     )}
+
+                    <div className="project-list">
+                        <div className="project-list-heading">
+                            <h3>Proyectos guardados</h3>
+                            <button
+                                type="button"
+                                className="traza-btn traza-btn-secondary"
+                                onClick={refreshProjects}
+                                disabled={loading || saving}
+                            >
+                                Actualizar lista
+                            </button>
+                        </div>
+
+                        {projectsError && (
+                            <p className="traza-message traza-message-error" role="alert">
+                                {projectsError}
+                            </p>
+                        )}
+
+                        {!projectsError && projects.length === 0 && (
+                            <p className="traza-form-help">
+                                Todavía no hay proyectos guardados.
+                            </p>
+                        )}
+
+                        {projects.length > 0 && (
+                            <ul className="project-list-items">
+                                {projects.map(project => (
+                                    <li
+                                        key={project._id}
+                                        className={
+                                            project._id === currentProjectId
+                                                ? "project-item is-current"
+                                                : "project-item"
+                                        }
+                                    >
+                                        <div className="project-item-info">
+                                            <strong>{project.name}</strong>
+                                            <span>
+                                                {project.mode === "geo"
+                                                    ? "Área geográfica"
+                                                    : "Cuadrícula 10 × 10"}
+                                                {" · "}
+                                                {project.features?.length ?? 0}{" "}
+                                                elementos{" · "}
+                                                {new Date(project.updatedAt).toLocaleString("es-PA")}
+                                            </span>
+                                        </div>
+
+                                        <div className="project-item-actions">
+                                            <button
+                                                type="button"
+                                                className="traza-btn traza-btn-secondary"
+                                                onClick={() => handleLoadProject(project)}
+                                                disabled={loading || saving}
+                                            >
+                                                Abrir
+                                            </button>
+                                            <button
+                                                type="button"
+                                                className="traza-btn traza-btn-secondary"
+                                                onClick={() => handleDuplicate(project)}
+                                                disabled={loading || saving}
+                                            >
+                                                Duplicar
+                                            </button>
+                                            <button
+                                                type="button"
+                                                className="traza-btn traza-btn-secondary project-item-remove"
+                                                onClick={() => handleDelete(project)}
+                                                disabled={loading || saving}
+                                            >
+                                                Eliminar
+                                            </button>
+                                        </div>
+                                    </li>
+                                ))}
+                            </ul>
+                        )}
+                    </div>
                 </section>
 
             </div>

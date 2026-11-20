@@ -1,30 +1,41 @@
 import { useEffect, useRef, useState } from "react";
 import { getWalkingPlaces } from "../services/api";
+import { useArea } from "../state/areaContext";
+import { bboxAreaKm2, formatKm2 } from "../utils/geo";
+import AreaBar from "../components/AreaBar";
 import "./Walkability.css";
 
 const categories = { education: "Educación", health: "Salud", food: "Alimentos", parks: "Parques" };
 const dateLabel = value => new Date(value).toLocaleString("es-PA");
 
 export default function Walkability() {
-  const [data, setData] = useState(null);
+  const { area, areaKm2 } = useArea();
+  const [loaded, setLoaded] = useState(null);
+  const [failure, setFailure] = useState(null);
   const [loading, setLoading] = useState(false);
-  const [error, setError] = useState("");
   const [category, setCategory] = useState("all");
   const controller = useRef(null);
 
   useEffect(() => () => controller.current?.abort(), []);
 
+  // Cada consulta recuerda el área con la que se hizo: al cambiar de área los
+  // resultados anteriores dejan de mostrarse sin necesidad de efectos.
+  const data = loaded && loaded.revision === area.revision ? loaded.result : null;
+  const error = failure && failure.revision === area.revision ? failure.message : "";
+
   async function loadPlaces() {
     controller.current?.abort();
     const request = new AbortController();
+    const revision = area.revision;
     controller.current = request;
     setLoading(true);
-    setError("");
+    setFailure(null);
+
     try {
-      const result = await getWalkingPlaces(request.signal);
-      setData(result);
+      const result = await getWalkingPlaces(area.bbox, request.signal);
+      setLoaded({ result, revision });
     } catch (err) {
-      if (err.name !== "AbortError") setError(err.message);
+      if (err.name !== "AbortError") setFailure({ message: err.message, revision });
     } finally {
       if (!request.signal.aborted) setLoading(false);
     }
@@ -34,9 +45,10 @@ export default function Walkability() {
 
   return (
     <div className="traza-page traza-container walking-page">
-      <header className="traza-page-header"><span className="traza-kicker">CIUDAD DEL SABER · PILOTO</span><h1>Un barrio más cerca de ti.</h1><p>Empezamos por conocer los servicios registrados alrededor de un punto de referencia en Ciudad del Saber.</p><span className="walking-pilot-label">Exploración inicial · Inventario de servicios</span></header>
-      <section className="traza-card walking-query" aria-labelledby="walking-query-title"><div><span className="traza-kicker">DATOS DEL TERRITORIO</span><h2 id="walking-query-title">¿Qué servicios están registrados cerca?</h2><p>Consulta educación, salud, alimentos y parques en un radio geográfico de 1,5 km desde el punto piloto (9.0025, −79.5804). Esta área no representa el límite oficial de Ciudad del Saber.</p></div><button className="traza-btn traza-btn-primary" type="button" disabled={loading} onClick={loadPlaces}>{loading ? "Consultando datos..." : data ? "Volver a consultar" : "Consultar servicios"}</button></section>
-      <p className="traza-message walking-scope"><strong>Distancia geográfica, todavía sin tiempos de caminata.</strong> Esta consulta identifica lugares; no confirma que estén a 5 o 10 minutos a pie. La conexión de recorridos peatonales y el mapa son el siguiente paso.</p>
+      <header className="traza-page-header"><span className="traza-kicker">ÁREA DE TRABAJO</span><h1>Un barrio más cerca de ti.</h1><p>Conoce los servicios registrados en el área que estás analizando.</p><span className="walking-pilot-label">Inventario de servicios · {area.name}</span></header>
+      <AreaBar allowView={false} />
+      <section className="traza-card walking-query" aria-labelledby="walking-query-title"><div><span className="traza-kicker">DATOS DEL TERRITORIO</span><h2 id="walking-query-title">¿Qué servicios están registrados en {area.name}?</h2><p>Consulta educación, salud, alimentos y parques dentro del área seleccionada ({formatKm2(areaKm2 ?? bboxAreaKm2(area.bbox))}). Describe lo mapeado en OpenStreetMap, no una delimitación oficial ni tiempos de caminata.</p></div><button className="traza-btn traza-btn-primary" type="button" disabled={loading} onClick={loadPlaces}>{loading ? "Consultando datos..." : data ? "Volver a consultar" : "Consultar servicios"}</button></section>
+      <p className="traza-message walking-scope"><strong>Distancia geográfica, todavía sin tiempos de caminata.</strong> Esta consulta identifica lugares dentro del área; no confirma que estén a 5 o 10 minutos a pie ni que la cobertura de OpenStreetMap esté completa.</p>
       {loading && <p className="traza-message" role="status">Consultando OpenStreetMap. La respuesta puede tardar hasta 25 segundos.</p>}
       {error && <p className="traza-message traza-message-error" role="alert">{error}{data ? " Se mantienen los resultados de la consulta anterior." : " No se obtuvo un inventario; esto no significa que no existan servicios."}</p>}
       {data && <>

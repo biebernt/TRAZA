@@ -331,3 +331,40 @@
 .urban-studio .project-buttons .traza-btn-secondary { background: white; border: 1px solid var(--traza-border); color: var(--traza-navy); }
 .urban-studio .project-buttons .traza-btn-secondary:hover { background: var(--traza-bg); }
 .urban-disclaimer { margin: 16px 0; }
+
+/* Comparación antes/después */
+.urban-studio .scenario-compare { margin: 28px 0; padding: 24px; border: 1px solid var(--traza-border); border-radius: var(--traza-radius); background: white; }
+.urban-studio .scenario-compare h2 { margin-top: 0; }
+.urban-studio .scenario-compare-heading { display: flex; justify-content: space-between; align-items: baseline; gap: 16px; flex-wrap: wrap; }
+.urban-studio .scenario-compare-heading p { margin: 8px 0 0; font-size: 13px; line-height: 1.8; color: var(--traza-muted); }
+.urban-studio .scenario-compare-count { font-size: 12px; font-weight: 700; color: var(--traza-green-dark); }
+.urban-studio .scenario-compare-table { width: 100%; border-collapse: collapse; margin-top: 18px; font-size: 13px; }
+.urban-studio .scenario-compare-table th, .urban-studio .scenario-compare-table td { padding: 10px 8px; border-bottom: 1px solid var(--traza-border); text-align: right; }
+.urban-studio .scenario-compare-table thead th { font-size: 11px; text-transform: uppercase; letter-spacing: .06em; color: var(--traza-muted); }
+.urban-studio .scenario-compare-table tbody th { text-align: left; font-weight: 600; }
+.urban-studio .scenario-delta { font-weight: 700; font-variant-numeric: tabular-nums; }
+.urban-studio .scenario-delta.is-up { color: var(--traza-green-dark); }
+.urban-studio .scenario-delta.is-down { color: #b42318; }
+.urban-studio .scenario-delta.is-even { color: var(--traza-muted); }
+
+/* Lista de proyectos */
+.urban-studio .project-list { margin-top: 24px; padding-top: 20px; border-top: 1px solid var(--traza-border); }
+.urban-studio .project-list-heading { display: flex; justify-content: space-between; align-items: center; gap: 12px; flex-wrap: wrap; }
+.urban-studio .project-list-heading h3 { margin: 0; font-size: 18px; }
+.urban-studio .project-list-items { list-style: none; margin: 16px 0 0; padding: 0; display: grid; gap: 10px; }
+.urban-studio .project-item { display: flex; justify-content: space-between; align-items: center; gap: 14px; flex-wrap: wrap; padding: 14px 16px; border: 1px solid var(--traza-border); border-radius: 12px; background: var(--traza-bg); }
+.urban-studio .project-item.is-current { border-color: var(--traza-green); background: #eaf7f3; }
+.urban-studio .project-item-info { display: flex; flex-direction: column; gap: 4px; min-width: 0; }
+.urban-studio .project-item-info strong { font-size: 14px; }
+.urban-studio .project-item-info span { font-size: 12px; color: var(--traza-muted); }
+.urban-studio .project-item-actions { display: flex; gap: 8px; flex-wrap: wrap; }
+.urban-studio .project-item-actions .traza-btn { min-height: 40px; padding-inline: 14px; font-size: 13px; }
+.urban-studio .project-item-remove { color: #b42318 !important; border-color: #f3c3be !important; }
+.urban-studio .project-item-remove:hover { background: #fdf1f0 !important; }
+
+@media (max-width: 640px) {
+  .urban-studio .scenario-compare { padding: 18px; }
+  .urban-studio .scenario-compare-table { font-size: 12px; }
+  .urban-studio .project-item-actions { width: 100%; }
+  .urban-studio .project-item-actions .traza-btn { flex: 1 1 auto; }
+}

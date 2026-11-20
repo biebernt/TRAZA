@@ -27,8 +27,18 @@ export async function saveProject(project) {
   return response.json();
 }
 
+// Envuelve fetch para no filtrar errores de red sin contexto al usuario.
+async function request(url, options) {
+  try {
+    return await fetch(url, options);
+  } catch (error) {
+    if (error.name === "AbortError") throw error;
+    throw new Error("No se pudo conectar con el servidor", { cause: error });
+  }
+}
+
 export async function getProjects() {
-  const response = await fetch(`${API_URL}/api/projects`);
+  const response = await request(`${API_URL}/api/projects`);
 
   if (!response.ok) {
     throw new Error("No se pudieron cargar los proyectos");
@@ -121,11 +131,77 @@ export async function logoutAdmin(token) {
     throw new Error("No se pudo cerrar sesión");
   }
 }
-export async function getWalkingPlaces(signal) {
-  const response = await fetch(`${API_URL}/api/walkability/places`, { signal });
+export async function getWalkingPlaces(bbox, signal) {
+  const query = Array.isArray(bbox) ? `?bbox=${bbox.join(",")}` : "";
+  const response = await request(
+    `${API_URL}/api/walkability/places${query}`,
+    { signal }
+  );
   const data = await response.json();
   if (!response.ok) {
-    throw new Error(data.error || "No se pudieron consultar los servicios del área piloto.");
+    throw new Error(data.error || "No se pudieron consultar los servicios del área.");
   }
   return data;
+}
+
+// Inventario geográfico del área: calles, edificios, verde y servicios.
+export async function getAreaInventory(bbox, signal) {
+  const response = await request(
+    `${API_URL}/api/osm/area?bbox=${bbox.join(",")}`,
+    { signal }
+  );
+  const data = await response.json();
+
+  if (!response.ok) {
+    throw new Error(
+      data.error || "No se pudo consultar el inventario del área."
+    );
+  }
+
+  return data;
+}
+
+export async function updateProject(id, project) {
+  const response = await request(`${API_URL}/api/projects/${id}`, {
+    method: "PUT",
+    headers: { "Content-Type": "application/json" },
+    body: JSON.stringify(project)
+  });
+
+  const data = await response.json();
+
+  if (!response.ok) {
+    throw new Error(data.error || "No se pudo actualizar el proyecto");
+  }
+
+  return data;
+}
+
+export async function duplicateProject(id) {
+  const response = await request(`${API_URL}/api/projects/${id}/duplicate`, {
+    method: "POST",
+    headers: { "Content-Type": "application/json" },
+    body: JSON.stringify({})
+  });
+
+  const data = await response.json();
+
+  if (!response.ok) {
+    throw new Error(data.error || "No se pudo duplicar el proyecto");
+  }
+
+  return data;
+}
+
+export async function deleteProject(id) {
+  const response = await request(`${API_URL}/api/projects/${id}`, {
+    method: "DELETE"
+  });
+
+  if (!response.ok) {
+    const data = await response.json().catch(() => ({}));
+    throw new Error(data.error || "No se pudo eliminar el proyecto");
+  }
+
+  return response.json();
 }

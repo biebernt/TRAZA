@@ -1,4 +1,6 @@
-// Fixed pilot area: no user-supplied Overpass queries or arbitrary URLs.
+// Inventario de servicios con Overpass: radio piloto por defecto o un área (bbox).
+// No se aceptan consultas Overpass libres ni URLs arbitrarias: solo el radio del
+// piloto o una bbox validada por la ruta.
 const PILOT = Object.freeze({
   name: "Ciudad del Saber",
   latitude: 9.0025,
@@ -33,27 +35,44 @@ function normalizePlaces(elements) {
   }).sort((a, b) => a.name.localeCompare(b.name, "es"));
 }
 
-// Factory allows controlled tests without making repeated public API requests.
-function createPlacesService({ fetchImpl = globalThis.fetch, now = Date.now } = {}) {
-  let cached;
-  let pending;
-  let retryAt = 0;
-
-  function snapshot(stale = false) {
-    return { ...cached, cache: { stale, expiresAt: new Date(cached.timestamp + CACHE_MS).toISOString() } };
+function queryScope(bbox) {
+  if (Array.isArray(bbox)) {
+    const [south, west, north, east] = bbox;
+    return {
+      key: `bbox:${bbox.map(value => Number(value).toFixed(5)).join(",")}`,
+      area: { kind: "bbox", bbox: [south, west, north, east] },
+      filter: `${south},${west},${north},${east}`
+    };
   }
 
-  function unavailable() {
+  return {
+    key: "pilot",
+    area: { kind: "radius", ...PILOT },
+    filter: `around:${PILOT.radiusMeters},${PILOT.latitude},${PILOT.longitude}`
+  };
+}
+
+// Factory allows controlled tests without making repeated public API requests.
+function createPlacesService({ fetchImpl = globalThis.fetch, now = Date.now } = {}) {
+  const cache = new Map();
+  const pending = new Map();
+  const retryAt = new Map();
+
+  function snapshot(record, stale = false) {
+    return { ...record, cache: { stale, expiresAt: new Date(record.timestamp + CACHE_MS).toISOString() } };
+  }
+
+  function unavailable(key) {
     const error = new Error("El servicio de datos de OpenStreetMap no está disponible. Inténtalo de nuevo en un minuto.");
     error.status = 503;
-    error.retryAfter = Math.max(1, Math.ceil((retryAt - now()) / 1000));
+    error.retryAfter = Math.max(1, Math.ceil(((retryAt.get(key) ?? 0) - now()) / 1000));
     return error;
   }
 
-  async function load() {
+  async function load(scope) {
     try {
-      const around = `around:${PILOT.radiusMeters},${PILOT.latitude},${PILOT.longitude}`;
-      const query = `[out:json][timeout:20];(nwr(${around})[amenity~"^(school|kindergarten|university|college|pharmacy|clinic|hospital|doctors|restaurant|cafe)$"];nwr(${around})[shop~"^(supermarket|convenience|greengrocer|bakery)$"];nwr(${around})[leisure=park];);out center tags;`;
+      const around = `(${scope.filter})`;
+      const query = `[out:json][timeout:20];(nwr${around}[amenity~"^(school|kindergarten|university|college|pharmacy|clinic|hospital|doctors|restaurant|cafe)$"];nwr${around}[shop~"^(supermarket|convenience|greengrocer|bakery)$"];nwr${around}[leisure=park];);out center tags;`;
       const url = new URL("https://overpass-api.de/api/interpreter");
       url.searchParams.set("data", query);
       const response = await fetchImpl(url, {
@@ -65,8 +84,8 @@ function createPlacesService({ fetchImpl = globalThis.fetch, now = Date.now } = 
       // Overpass may report a timed-out/incomplete query in a successful HTTP response.
       if (!Array.isArray(data.elements) || data.remark) throw new Error("Incomplete upstream response");
       const timestamp = now();
-      cached = {
-        area: PILOT,
+      const record = {
+        area: scope.area,
         source: "OpenStreetMap · Overpass API",
         attribution: "© OpenStreetMap contributors · ODbL",
         osmTimestamp: data.osm3s?.timestamp_osm_base || null,
@@ -74,24 +93,35 @@ function createPlacesService({ fetchImpl = globalThis.fetch, now = Date.now } = 
         timestamp,
         places: normalizePlaces(data.elements)
       };
-      retryAt = 0;
-      return snapshot();
+      cache.set(scope.key, record);
+      retryAt.delete(scope.key);
+      return snapshot(record);
     } catch {
-      retryAt = now() + BACKOFF_MS;
-      if (cached) return snapshot(true);
-      throw unavailable();
+      retryAt.set(scope.key, now() + BACKOFF_MS);
+      const cached = cache.get(scope.key);
+      if (cached) return snapshot(cached, true);
+      throw unavailable(scope.key);
     }
   }
 
-  return async function getPlaces() {
-    if (cached && now() < cached.timestamp + CACHE_MS) return snapshot();
-    if (now() < retryAt) {
-      if (cached) return snapshot(true);
-      throw unavailable();
+  return async function getPlaces(bbox) {
+    const scope = queryScope(bbox);
+    const cached = cache.get(scope.key);
+
+    if (cached && now() < cached.timestamp + CACHE_MS) return snapshot(cached);
+
+    if (now() < (retryAt.get(scope.key) ?? 0)) {
+      if (cached) return snapshot(cached, true);
+      throw unavailable(scope.key);
     }
-    if (!pending) pending = load().finally(() => { pending = null; });
-    return pending;
+
+    if (!pending.has(scope.key)) {
+      const task = load(scope).finally(() => pending.delete(scope.key));
+      pending.set(scope.key, task);
+    }
+
+    return pending.get(scope.key);
   };
 }
 
-module.exports = { createPlacesService, normalizePlaces };
+module.exports = { createPlacesService, normalizePlaces, queryScope };

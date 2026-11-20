@@ -9,7 +9,11 @@ import {
 } from "../utils/geo";
 import "./AreaBar.css";
 
-export default function AreaBar({ view = null, disabled = false }) {
+export default function AreaBar({
+  view = null,
+  disabled = false,
+  allowView = true
+}) {
   const { area, areaKm2, error, setArea, resetArea } = useArea();
 
   const viewBbox = view ? bboxFromView(view) : null;
@@ -45,14 +49,16 @@ export default function AreaBar({ view = null, disabled = false }) {
       </div>
 
       <div className="area-bar-actions">
-        <button
-          type="button"
-          className="traza-btn traza-btn-primary"
-          onClick={useCurrentView}
-          disabled={disabled || !canUseView || viewTooLarge}
-        >
-          Usar la vista actual
-        </button>
+        {allowView && (
+          <button
+            type="button"
+            className="traza-btn traza-btn-primary"
+            onClick={useCurrentView}
+            disabled={disabled || !canUseView || viewTooLarge}
+          >
+            Usar la vista actual
+          </button>
+        )}
 
         <button
           type="button"
@@ -63,9 +69,15 @@ export default function AreaBar({ view = null, disabled = false }) {
           Volver al área piloto
         </button>
 
-        {!canUseView && (
+        {allowView && !canUseView && (
           <p className="area-bar-hint">
             Mueve el mapa para definir un área desde la vista.
+          </p>
+        )}
+
+        {!allowView && (
+          <p className="area-bar-hint">
+            El área se elige en el Urban Studio y se mantiene en este navegador.
           </p>
         )}
 
