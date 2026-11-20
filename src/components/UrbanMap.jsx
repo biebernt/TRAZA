@@ -9,7 +9,7 @@ import {
     latLonToPixel,
     pixelToLatLon,
     wrapTileX,
-    zoomForBbox,
+    zoomForBboxExact,
     zoomForMaxViewArea,
 } from "../utils/geo";
 import "./UrbanMap.css";
@@ -78,13 +78,21 @@ export default function UrbanMap({
             })
             : null;
 
-    // La vista inicial se ajusta para no superar el área máxima permitida.
+    // La vista inicial muestra el área completa sin superar el máximo: el
+    // encuadre se queda con el zoom más cercano que cumple ambas cosas.
     if (!initialFitDone && size.width > 0 && size.height > 0) {
         setInitialFitDone(true);
 
-        const initialZoom = zoomForMaxViewArea(center, size);
+        const fittedZoom = area?.bbox
+            ? zoomForBboxExact(area.bbox, size)
+            : null;
+        const limitZoom = zoomForMaxViewArea(center, size);
+        const initialZoom = Math.max(
+            fittedZoom ?? limitZoom ?? INITIAL_ZOOM,
+            limitZoom ?? INITIAL_ZOOM
+        );
 
-        if (initialZoom !== null) setZoom(initialZoom);
+        if (initialZoom !== zoom) setZoom(initialZoom);
     }
 
     // Un cambio de área mueve el encuadre; si el área ya coincide con la
@@ -106,11 +114,11 @@ export default function UrbanMap({
 
         if (!sameAsView) {
             const targetCenter = bboxCenter(area.bbox);
-            const fittedZoom = zoomForBbox(area.bbox, size);
+            const fittedZoom = zoomForBboxExact(area.bbox, size);
             const limitZoom = zoomForMaxViewArea(targetCenter, size);
             const targetZoom = Math.max(
-                fittedZoom ?? MIN_ZOOM,
-                limitZoom ?? MIN_ZOOM
+                fittedZoom ?? limitZoom ?? zoom,
+                limitZoom ?? zoom
             );
 
             setCenter(targetCenter);
@@ -152,24 +160,35 @@ export default function UrbanMap({
     const tiles = useMemo(() => {
         if (!size.width || !size.height) return [];
 
+        // Las teselas solo existen en zooms enteros: se usa el siguiente y se
+        // escalan para que el encuadre fraccionario se vea sin huecos.
+        const tileZoom = Math.max(
+            MIN_ZOOM,
+            Math.min(MAX_ZOOM, Math.ceil(zoom))
+        );
+        const scale = 2 ** (zoom - tileZoom);
+        const tileSize = TILE_SIZE * scale;
+        const viewWidth = size.width / scale;
+        const viewHeight = size.height / scale;
+
         const centerPixel = latLonToPixel(
             center.lat,
             center.lon,
-            zoom
+            tileZoom
         );
 
-        const left = centerPixel.x - size.width / 2;
-        const top = centerPixel.y - size.height / 2;
+        const left = centerPixel.x - viewWidth / 2;
+        const top = centerPixel.y - viewHeight / 2;
 
         const startX = Math.floor(left / TILE_SIZE) - 1;
         const endX =
-            Math.floor((left + size.width) / TILE_SIZE) + 1;
+            Math.floor((left + viewWidth) / TILE_SIZE) + 1;
 
         const startY = Math.floor(top / TILE_SIZE) - 1;
         const endY =
-            Math.floor((top + size.height) / TILE_SIZE) + 1;
+            Math.floor((top + viewHeight) / TILE_SIZE) + 1;
 
-        const totalTiles = 2 ** zoom;
+        const totalTiles = 2 ** tileZoom;
         const result = [];
 
         for (let x = startX; x <= endX; x++) {
@@ -177,13 +196,15 @@ export default function UrbanMap({
                 if (y < 0 || y >= totalTiles) continue;
 
                 result.push({
-                    key: `${zoom}-${x}-${y}`,
-                    url: `https://tile.openstreetmap.org/${zoom}/${wrapTileX(
+                    key: `${tileZoom}-${x}-${y}`,
+                    url: `https://tile.openstreetmap.org/${tileZoom}/${wrapTileX(
                         x,
                         totalTiles
                     )}/${y}.png`,
-                    left: x * TILE_SIZE - left,
-                    top: y * TILE_SIZE - top,
+                    left: (x * TILE_SIZE - left) * scale,
+                    top: (y * TILE_SIZE - top) * scale,
+                    // Medio píxel extra evita costuras entre teselas.
+                    size: tileSize + 0.5,
                 });
             }
         }
@@ -252,7 +273,7 @@ export default function UrbanMap({
             const step = event.deltaY > 0 ? -1 : 1;
 
             zoomAt(
-                zoom + step,
+                Math.round(zoom) + step,
                 event.clientX - rect.left,
                 event.clientY - rect.top
             );
@@ -427,12 +448,12 @@ export default function UrbanMap({
             case "+":
             case "=":
                 event.preventDefault();
-                zoomAt(zoom + 1);
+                zoomAt(Math.round(zoom) + 1);
                 break;
             case "-":
             case "_":
                 event.preventDefault();
-                zoomAt(zoom - 1);
+                zoomAt(Math.round(zoom) - 1);
                 break;
             case "Enter":
             case " ":
@@ -546,8 +567,24 @@ export default function UrbanMap({
                     type="button"
                     className="urban-map-reset"
                     onClick={() => {
-                        setCenter(INITIAL_CENTER);
-                        setZoom(INITIAL_ZOOM);
+                        const targetCenter = area?.bbox
+                            ? bboxCenter(area.bbox)
+                            : INITIAL_CENTER;
+                        const fittedZoom = area?.bbox
+                            ? zoomForBboxExact(area.bbox, size)
+                            : null;
+                        const limitZoom = zoomForMaxViewArea(
+                            targetCenter,
+                            size
+                        );
+
+                        setCenter(targetCenter);
+                        setZoom(
+                            Math.max(
+                                fittedZoom ?? limitZoom ?? INITIAL_ZOOM,
+                                limitZoom ?? INITIAL_ZOOM
+                            )
+                        );
                         setAnnouncement("Vista del mapa restablecida.");
                     }}
                 >
@@ -592,6 +629,8 @@ export default function UrbanMap({
                             style={{
                                 left: `${tile.left}px`,
                                 top: `${tile.top}px`,
+                                width: `${tile.size}px`,
+                                height: `${tile.size}px`,
                             }}
                         />
                     ))}
@@ -608,9 +647,13 @@ export default function UrbanMap({
                             height: `${areaFrame.height}px`,
                         }}
                     >
-                        <span className="urban-map-area-frame-label">
-                            {area.name}
-                        </span>
+                        {/* El rótulo solo se muestra si no choca con la
+                            píldora de zoom de la esquina superior. */}
+                        {areaFrame.top >= 46 && (
+                            <span className="urban-map-area-frame-label">
+                                {area.name}
+                            </span>
+                        )}
                     </div>
                 )}
 
@@ -656,7 +699,7 @@ export default function UrbanMap({
                 >
                     <button
                         type="button"
-                        onClick={() => zoomAt(zoom + 1)}
+                        onClick={() => zoomAt(Math.round(zoom) + 1)}
                         disabled={zoom >= MAX_ZOOM}
                         aria-label="Acercar mapa"
                     >
@@ -665,7 +708,7 @@ export default function UrbanMap({
 
                     <button
                         type="button"
-                        onClick={() => zoomAt(zoom - 1)}
+                        onClick={() => zoomAt(Math.round(zoom) - 1)}
                         disabled={zoom <= MIN_ZOOM}
                         aria-label="Alejar mapa"
                     >
@@ -674,7 +717,10 @@ export default function UrbanMap({
                 </div>
 
                 <div className="urban-map-zoom-label">
-                    Zoom {zoom}
+                    {`Zoom ${zoom.toLocaleString("es-PA", {
+                        minimumFractionDigits: 0,
+                        maximumFractionDigits: 1,
+                    })}`}
                 </div>
 
                 <div className="urban-map-tool-hint">

@@ -148,29 +148,57 @@ export function zoomForBbox(bbox, { width, height }, margin = 0.82) {
   return Math.max(MIN_ZOOM, Math.min(MAX_ZOOM, zoom));
 }
 
-// Mayor zoom (más contexto) cuya vista no supera el área máxima indicada.
-// Sirve para que la vista inicial y los encuadres automáticos respeten el
-// límite de "Usar la vista actual".
+// Zoom fraccionario que encaja la bbox dentro del lienzo dejando un margen.
+// Hace falta porque con zooms enteros puede no existir ninguno que muestre el
+// área completa sin que la vista supere el máximo permitido.
+export function zoomForBboxExact(bbox, { width, height }, margin = 0.9) {
+  if (!bbox || !width || !height) return null;
+
+  const northWest = latLonToPixel(bbox[2], bbox[1], 0);
+  const southEast = latLonToPixel(bbox[0], bbox[3], 0);
+
+  const boxWidth = Math.abs(southEast.x - northWest.x);
+  const boxHeight = Math.abs(southEast.y - northWest.y);
+
+  if (!boxWidth || !boxHeight) return null;
+
+  const zoom = Math.log2(
+    Math.min((width * margin) / boxWidth, (height * margin) / boxHeight)
+  );
+
+  return Math.max(MIN_ZOOM, Math.min(MAX_ZOOM, zoom));
+}
+
+// Mayor zoom (más contexto) cuya vista completa no supera el área máxima
+// indicada. Devuelve un valor continuo para que el encuadre pueda ajustarse
+// justo al límite sin llegar a superarlo.
 export function zoomForMaxViewArea(
   center,
   { width, height },
-  maxKm2 = MAX_AREA_KM2,
-  margin = 0.92
+  maxKm2 = MAX_AREA_KM2
 ) {
   if (!center || !width || !height) return null;
 
-  for (let zoom = MIN_ZOOM; zoom <= MAX_ZOOM; zoom++) {
-    const bbox = bboxFromView({
-      center,
-      zoom,
-      width: width * margin,
-      height: height * margin,
-    });
+  const areaAt = (zoom) => {
+    const bbox = bboxFromView({ center, zoom, width, height });
 
-    if (bbox && bboxAreaKm2(bbox) <= maxKm2) return zoom;
+    return bbox ? bboxAreaKm2(bbox) : Infinity;
+  };
+
+  if (areaAt(MIN_ZOOM) <= maxKm2) return MIN_ZOOM;
+  if (areaAt(MAX_ZOOM) > maxKm2) return MAX_ZOOM;
+
+  let low = MIN_ZOOM;
+  let high = MAX_ZOOM;
+
+  for (let index = 0; index < 40; index++) {
+    const middle = (low + high) / 2;
+
+    if (areaAt(middle) > maxKm2) low = middle;
+    else high = middle;
   }
 
-  return MAX_ZOOM;
+  return high;
 }
 
 export function formatKm2(km2) {

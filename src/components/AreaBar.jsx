@@ -15,7 +15,9 @@ export default function AreaBar({ view = null, disabled = false }) {
   const viewBbox = view ? bboxFromView(view) : null;
   const viewKm2 = viewBbox ? bboxAreaKm2(viewBbox) : 0;
   const canUseView = Boolean(viewBbox);
-  const viewTooLarge = canUseView && viewKm2 > MAX_AREA_KM2;
+  // Margen mínimo para que un encuadre justo en el límite no se marque como
+  // excedido por redondeo de coma flotante.
+  const viewTooLarge = canUseView && viewKm2 > MAX_AREA_KM2 + 1e-6;
   const isPilot = area.name === PILOT_AREA.name;
 
   function useCurrentView() {
