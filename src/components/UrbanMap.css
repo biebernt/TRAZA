@@ -80,6 +80,27 @@
   -webkit-user-drag: none;
 }
 
+.urban-map-area-frame {
+  position: absolute;
+  z-index: 1;
+  border: 2px dashed var(--traza-green-dark, #117b69);
+  background: rgba(21, 156, 131, 0.07);
+  pointer-events: none;
+}
+
+.urban-map-area-frame-label {
+  position: absolute;
+  top: -15px;
+  left: -2px;
+  padding: 2px 8px;
+  border-radius: 5px;
+  background: var(--traza-green-dark, #117b69);
+  color: white;
+  font-size: 11px;
+  font-weight: 600;
+  white-space: nowrap;
+}
+
 .urban-map-features {
   position: absolute;
   inset: 0;

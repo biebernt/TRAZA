@@ -1,5 +1,6 @@
 import { useState } from "react";
 import Navbar from "./components/Navbar";
+import { AreaProvider } from "./state/AreaContext";
 
 import Home from "./pages/Home";
 import Services from "./pages/Services";
@@ -43,13 +44,15 @@ export default function App() {
   }
 
   return (
-    <div className="traza-layout">
-      <a className="traza-skip-link" href="#main-content">Saltar al contenido</a>
-      <Navbar page={page} navigate={setPage} />
+    <AreaProvider>
+      <div className="traza-layout">
+        <a className="traza-skip-link" href="#main-content">Saltar al contenido</a>
+        <Navbar page={page} navigate={setPage} />
 
-      <main id="main-content" className="traza-main" tabIndex={-1}>
-        {renderPage()}
-      </main>
-    </div>
+        <main id="main-content" className="traza-main" tabIndex={-1}>
+          {renderPage()}
+        </main>
+      </div>
+    </AreaProvider>
   );
 }
