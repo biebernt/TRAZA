@@ -10,7 +10,7 @@ const EARTH_RADIUS_M = 6371008.8;
 
 // Área piloto verificada de Ciudad del Saber (Panamá).
 export const PILOT_AREA = Object.freeze({
-  name: "Ciudad del Saber (piloto)",
+  name: "Ciudad del Saber",
   bbox: [8.995, -79.589, 9.0045, -79.578],
 });
 
