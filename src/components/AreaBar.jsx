@@ -4,7 +4,6 @@ import {
   PILOT_AREA,
   bboxAreaKm2,
   bboxFromView,
-  formatBbox,
   formatKm2,
 } from "../utils/geo";
 import "./AreaBar.css";
@@ -14,7 +13,7 @@ export default function AreaBar({
   disabled = false,
   allowView = true
 }) {
-  const { area, areaKm2, error, setArea, resetArea } = useArea();
+  const { area, error, setArea, resetArea } = useArea();
 
   const viewBbox = view ? bboxFromView(view) : null;
   const viewKm2 = viewBbox ? bboxAreaKm2(viewBbox) : 0;

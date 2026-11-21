@@ -4,14 +4,9 @@ import { getLocationBreakdown, rankLocations } from "../utils/locationAlgorithm"
 import { analyzeArea } from "../utils/areaInsights";
 import { getAreaInventory } from "../services/api";
 import { useArea } from "../state/areaContext";
-import { bboxAreaKm2, formatKm2 } from "../utils/geo";
+import { formatKm2 } from "../utils/geo";
 import AreaBar from "./AreaBar";
 import "./LocationAnalyzer.css";
-
-const formatPoints = value => value.toLocaleString("es-PA", {
-  minimumFractionDigits: 2,
-  maximumFractionDigits: 2
-});
 
 const dateLabel = value => new Date(value).toLocaleString("es-PA");
 
@@ -128,8 +123,6 @@ export default function LocationAnalyzer() {
   const results = rankLocations(zones, business);
   const best = results[0];
   const weights = getLocationBreakdown(best, business);
-  const strongest = [...weights].sort((a, b) => b.contribution - a.contribution)[0];
-  const difference = best.score - results[1].score;
 
   return (
     <section className="location-analyzer" aria-labelledby="location-title">
