@@ -11,6 +11,8 @@ app.use(express.json());
 app.use("/api/projects", require("./routes/projects"));
 app.use("/api/contacts", require("./routes/contacts"));
 app.use("/api/auth", require("./routes/auth"));
+app.use("/api/auth/users", require("./routes/userAuth"));
+app.use("/api/admin", require("./routes/admin"));
 app.use("/api/walkability", require("./routes/walkability"));
 app.use("/api/osm", require("./routes/osm"));
 
@@ -48,4 +50,9 @@ async function startServer() {
   }
 }
 
-startServer();
+// Las pruebas de integración importan la app y gestionan su propia conexión.
+if (require.main === module) {
+  startServer();
+}
+
+module.exports = app;

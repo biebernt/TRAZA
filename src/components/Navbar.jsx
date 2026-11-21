@@ -1,4 +1,5 @@
 import { useState } from "react";
+import { useAuth } from "../state/authContext";
 import "./Navbar.css";
 
 const navigation = [
@@ -7,12 +8,30 @@ const navigation = [
   { id: "urban", label: "Urban Studio", symbol: "▦" },
   { id: "intelligence", label: "Location Intelligence", symbol: "◎" },
   { id: "walkability", label: "Caminabilidad", symbol: "⌁" },
-  { id: "contact", label: "Contacto", symbol: "✉" },
-  { id: "admin", label: "Administración", symbol: "⚙" }
+  { id: "contact", label: "Contacto", symbol: "✉" }
 ];
+
+const ADMIN_LINK = { id: "admin", label: "Administración", symbol: "⚙" };
 
 export default function Navbar({ page, navigate }) {
   const [menuOpen, setMenuOpen] = useState(false);
+  const { user, logout } = useAuth();
+
+  // La cuenta personal aparece según la sesión; el acceso administrativo se
+  // mantiene siempre visible porque tiene su propio inicio de sesión.
+  const links = [
+    ...navigation,
+    user
+      ? { id: "account", label: "Mis proyectos", symbol: "◉" }
+      : { id: "login", label: "Ingresar", symbol: "→" },
+    ADMIN_LINK
+  ];
+
+  async function handleLogout() {
+    await logout();
+    setMenuOpen(false);
+    navigate("home");
+  }
 
   function selectPage(id) {
     navigate(id);
@@ -37,12 +56,18 @@ export default function Navbar({ page, navigate }) {
       </div>
       <nav id="traza-navigation" className={menuOpen ? "navbar-navigation is-open" : "navbar-navigation"} aria-label="Navegación principal">
         <span className="navbar-section-label">EXPLORA URBI</span>
-        {navigation.map(item => (
+        {links.map(item => (
           <button type="button" key={item.id} className={page === item.id ? "nav-active" : ""} aria-current={page === item.id ? "page" : undefined} onClick={() => selectPage(item.id)}>
             <span className="navbar-symbol" aria-hidden="true">{item.symbol}</span><span>{item.label}</span>{page === item.id && <span className="navbar-active-dot" aria-hidden="true" />}
           </button>
         ))}
       </nav>
+      {user && (
+        <div className="navbar-session">
+          <span>Hola, {user.name.split(" ")[0]}</span>
+          <button type="button" onClick={handleLogout}>Cerrar sesión</button>
+        </div>
+      )}
       <div className="navbar-footer"><span className="navbar-prototype">PROTOTIPO EDUCATIVO</span><p>Ideas que dan forma<br />al territorio.</p><small>Hecho en Panamá · 2026</small></div>
     </aside>
   );

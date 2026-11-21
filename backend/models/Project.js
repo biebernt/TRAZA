@@ -168,6 +168,12 @@ const projectSchema = new mongoose.Schema(
       },
     },
     area: { type: areaSchema, default: undefined },
+    // Cuenta propietaria. Los proyectos guardados sin sesión no lo tienen.
+    user: {
+      type: mongoose.Schema.Types.ObjectId,
+      ref: "User",
+      default: undefined,
+    },
     // Propiedad por navegador: identificador público, no una credencial.
     ownerKey: {
       type: String,
@@ -238,6 +244,7 @@ projectSchema.pre("validate", function validateProjectShape() {
 });
 
 projectSchema.index({ ownerKey: 1, updatedAt: -1 });
+projectSchema.index({ user: 1, updatedAt: -1 });
 projectSchema.index({ updatedAt: -1 });
 
 const Project = mongoose.model("Project", projectSchema);

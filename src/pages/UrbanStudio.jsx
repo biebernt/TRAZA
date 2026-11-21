@@ -14,6 +14,8 @@ import AreaBar from "../components/AreaBar";
 import ScenarioComparison from "../components/ScenarioComparison";
 
 import { useArea } from "../state/areaContext";
+import { useAuth } from "../state/authContext";
+import { getOwnerKey } from "../utils/ownerKey";
 import { bboxCenter } from "../utils/geo";
 
 import { CELL_TYPES } from "../utils/urbanAnalysis";
@@ -25,7 +27,7 @@ const initialMap = Array(100).fill("empty");
 
 const types = CELL_TYPES;
 
-export default function UrbanStudio() {
+export default function UrbanStudio({ handoff = null, onHandoffConsumed }) {
     // Estados principales
     const [map, setMap] = useState([...initialMap]);
     const [selectedTool, setSelectedTool] = useState("house");
@@ -44,6 +46,8 @@ export default function UrbanStudio() {
     const [baseline, setBaseline] = useState(null);
 
     const { area, setArea } = useArea();
+    const { token } = useAuth();
+    const [ownerKey] = useState(() => getOwnerKey());
 
     const handleViewChange = useCallback(view => {
         setMapView(view);
@@ -89,18 +93,18 @@ export default function UrbanStudio() {
 
     const refreshProjects = useCallback(async () => {
         try {
-            setProjects(await getProjects());
+            setProjects(await getProjects({ token, ownerKey }));
             setProjectsError("");
         } catch (error) {
             setProjects([]);
             setProjectsError(error.message);
         }
-    }, []);
+    }, [token, ownerKey]);
 
     useEffect(() => {
         let active = true;
 
-        getProjects()
+        getProjects({ token, ownerKey })
             .then(list => {
                 if (!active) return;
                 setProjects(list);
@@ -115,7 +119,7 @@ export default function UrbanStudio() {
         return () => {
             active = false;
         };
-    }, []);
+    }, [token, ownerKey]);
 
     // Editar una celda del mapa
     function editCell(index) {
@@ -160,6 +164,7 @@ export default function UrbanStudio() {
             name,
             description: "Proyecto creado en URBI Urban Studio",
             mode: "grid",
+            ...(token ? {} : { ownerKey }),
             map,
             features: features.map(({ id, type, lat, lon }) => ({
                 id,
@@ -204,8 +209,12 @@ export default function UrbanStudio() {
 
         try {
             const saved = updating
-                ? await updateProject(currentProjectId, projectPayload(name))
-                : await saveProject(projectPayload(name));
+                ? await updateProject(
+                      currentProjectId,
+                      projectPayload(name),
+                      token
+                  )
+                : await saveProject(projectPayload(name), token);
 
             setCurrentProjectId(saved._id);
             setProjectName(saved.name);
@@ -226,9 +235,10 @@ export default function UrbanStudio() {
         }
     }
 
-    // Abre un proyecto concreto de la lista.
-    function handleLoadProject(project) {
+    // Aplica un proyecto guardado al editor, validando su cuadrícula.
+    function applyProject(project, { confirm = true } = {}) {
         if (
+            confirm &&
             (map.some(cell => cell !== "empty") || features.length > 0) &&
             !window.confirm("Abrir un proyecto reemplazará el mapa actual. ¿Quieres continuar?")
         ) {
@@ -271,13 +281,43 @@ export default function UrbanStudio() {
         }
     }
 
+    function handleLoadProject(project) {
+        applyProject(project);
+    }
+
+    // Abre un proyecto enviado desde «Mis proyectos» o inicia uno en blanco.
+    useEffect(() => {
+        if (!handoff) return undefined;
+
+        const timer = window.setTimeout(() => {
+            if (handoff.type === "open" && handoff.project) {
+                applyProject(handoff.project, { confirm: false });
+            }
+
+            if (handoff.type === "new") {
+                setCurrentProjectId(null);
+                setBaseline(null);
+                setMap([...initialMap]);
+                setFeatures([]);
+                setProjectName("");
+                setMessageError(false);
+                setMessage("El próximo guardado creará un proyecto nuevo.");
+            }
+
+            onHandoffConsumed?.();
+        }, 0);
+
+        return () => window.clearTimeout(timer);
+        // eslint-disable-next-line react-hooks/exhaustive-deps
+    }, [handoff]);
+
     async function handleDuplicate(project) {
         setMessageError(false);
         setLoading(true);
         setMessage("");
 
         try {
-            const copy = await duplicateProject(project._id);
+            const copy = await duplicateProject(project._id, token);
             setMessage(`Proyecto duplicado: ${copy.name}`);
             await refreshProjects();
         } catch (error) {
@@ -309,7 +349,7 @@ export default function UrbanStudio() {
         setMessage("");
 
         try {
-            await deleteProject(project._id);
+            await deleteProject(project._id, token);
 
             if (currentProjectId === project._id) {
                 setCurrentProjectId(null);
