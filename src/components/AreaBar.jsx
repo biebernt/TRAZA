@@ -33,19 +33,8 @@ export default function AreaBar({
   return (
     <section className="area-bar" aria-labelledby="area-bar-title">
       <div className="area-bar-summary">
-        <span className="traza-kicker">ÁREA DE TRABAJO</span>
+        <span className="traza-kicker">WORKSPACE</span>
         <h2 id="area-bar-title">{area.name}</h2>
-
-        <p className="area-bar-meta" role="status">
-          <strong>{formatKm2(areaKm2)}</strong>
-          <span aria-hidden="true"> · </span>
-          {formatBbox(area.bbox)}
-        </p>
-
-        <p className="area-bar-note">
-          Límite del prototipo: {MAX_AREA_KM2} km². El área se guarda
-          en este navegador y se adjunta al proyecto cuando lo guardas.
-        </p>
       </div>
 
       <div className="area-bar-actions">

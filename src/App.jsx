@@ -1,6 +1,6 @@
 import { useState } from "react";
 import Navbar from "./components/Navbar";
-import { AreaProvider } from "./state/AreaContext";
+import { AreaProvider } from "./state/AreaContext.jsx";
 
 import Home from "./pages/Home";
 import Services from "./pages/Services";

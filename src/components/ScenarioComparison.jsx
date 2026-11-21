@@ -69,8 +69,7 @@ export default function ScenarioComparison({ baseline, map, features = [] }) {
           <h2 id="scenario-compare-title">Antes y después</h2>
           <p>
             Referencia: <strong>{baseline.name || "proyecto guardado"}</strong>.
-            La columna «después» refleja el escenario que tienes en pantalla,
-            guardado o no.
+            La columna «después» refleja el escenario que tienes en pantalla.
           </p>
         </div>
         <span className="scenario-compare-count">
@@ -111,11 +110,6 @@ export default function ScenarioComparison({ baseline, map, features = [] }) {
           ))}
         </tbody>
       </table>
-
-      <p className="traza-form-help">
-        Comparación de la cuadrícula de 10 × 10 con las mismas reglas de
-        ejemplo que los indicadores urbanos. No es una evaluación normativa.
-      </p>
     </section>
   );
 }

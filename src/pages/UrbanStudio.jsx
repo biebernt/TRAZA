@@ -419,11 +419,7 @@ export default function UrbanStudio() {
                 </section>
 
                 {/* Análisis urbano */}
-                <p className="traza-form-help urban-disclaimer">
-                    Los elementos del mapa se colocan sobre el área de trabajo
-                    y se guardan con sus coordenadas al guardar el proyecto.
-                </p>
-
+            
                 <UrbanStats map={map} />
 
                 <ScenarioComparison
@@ -431,16 +427,10 @@ export default function UrbanStudio() {
                     map={map}
                     features={features}
                 />
-                <p className="traza-form-help urban-disclaimer">Indicadores demostrativos basados en reglas de ejemplo, sin validación normativa. No sustituyen una evaluación urbanística profesional.</p>
 
                 {/* Gestión de proyectos */}
                 <section className="project-actions">
                     <h2>Gestión de proyectos</h2>
-
-                    <p>
-                        Guarda tu diseño urbano o recupera
-                        el proyecto más reciente.
-                    </p>
 
                     <form className="urban-project-form" onSubmit={handleSave}>
                         <div className="traza-field"><label htmlFor="urban-project-name">Nombre del proyecto</label><input id="urban-project-name" value={projectName} onChange={event => setProjectName(event.target.value)} maxLength={100} placeholder="Ej. Barrio Las Palmeras" disabled={saving || loading} required /></div>
@@ -470,7 +460,7 @@ export default function UrbanStudio() {
                         </div>
 
                     </form>
-                    <p className="traza-form-help">Los proyectos se guardan en el servidor compartido de este prototipo. Salir de esta sección descarta los cambios sin guardar.</p>
+
                     {message && (
                         <p role={messageError ? "alert" : "status"} className={`traza-message ${messageError ? "traza-message-error" : "traza-message-success"}`}>
                             {message}
